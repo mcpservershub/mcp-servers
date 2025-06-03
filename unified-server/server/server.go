@@ -145,12 +145,13 @@ func main() {
 		),
 	)
 	MarkItDownHandler := func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		args := req.GetArguments()
 		// Validate the "input" and "output" arguments.
-		input, ok := req.Params.Arguments["input"].(string)
+		input, ok := args["input"].(string)
 		if !ok || input == "" {
 			return mcp.NewToolResultText("invalid or missing input parameter"), nil
 		}
-		output, ok := req.Params.Arguments["output"].(string)
+		output, ok := args["output"].(string)
 		if !ok || output == "" {
 			return mcp.NewToolResultText("invalid or missing output parameter"), nil
 		}
@@ -188,25 +189,25 @@ func main() {
 		),
 	)
 	searchCodeHandler := func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		// 1. Validate
-		pattern, ok := req.Params.Arguments["pattern"].(string)
+		args := req.GetArguments()
+		pattern, ok := args["pattern"].(string)
 		if !ok || pattern == "" {
 			return mcp.NewToolResultText("invalid or missing 'pattern' parameter"), nil
 		}
-		newPattern, ok := req.Params.Arguments["new-pattern"].(string)
+		newPattern, ok := args["new-pattern"].(string)
 		if !ok || newPattern == "" {
 			return mcp.NewToolResultText("invalid or missing 'new-pattern' parameter"), nil
 		}
-		lang, ok := req.Params.Arguments["language"].(string)
+		lang, ok := args["language"].(string)
 		if !ok || lang == "" {
 			return mcp.NewToolResultText("invalid or missing 'language' parameter"), nil
 		}
-		pathParam, ok := req.Params.Arguments["path"].(string)
+		pathParam, ok := args["path"].(string)
 		if !ok || pathParam == "" {
 			return mcp.NewToolResultText("invalid or missing 'path' parameter"), nil
 		}
 
-		// 2. Split paths (comma or space)
+		// Split paths (comma or space)
 		var paths []string
 		if strings.Contains(pathParam, ",") {
 			for _, p := range strings.Split(pathParam, ",") {
@@ -218,17 +219,17 @@ func main() {
 			paths = strings.Fields(pathParam)
 		}
 
-		// 3. Build CLI args
-		args := []string{
+		// Build CLI args
+		ast_args := []string{
 			"--pattern", pattern,
 			"--rewrite", newPattern,
 			"--lang", lang,
 			"-U",
 		}
-		args = append(args, paths...)
+		ast_args = append(ast_args, paths...)
 
 		//  Run ast-grep
-		outBytes, err := exec.Command("ast-grep", args...).CombinedOutput()
+		outBytes, err := exec.Command("ast-grep", ast_args...).CombinedOutput()
 		out := strings.TrimSpace(string(outBytes))
 
 		// If the CLI itself errored *and* produced no output, treat as “no matches”
@@ -262,6 +263,7 @@ func main() {
 	)
 
 	mirrordHandler := func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		args := req.GetArguments()
 		// Validate config param
 		cfg, ok := req.Params.Arguments["config"].(string)
 		if !ok || cfg == "" {
@@ -343,7 +345,8 @@ func main() {
 		),
 	)
 	gitInitHandler := func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		directory, ok := req.Params.Arguments["directory"].(string)
+		args := req.GetArguments()
+		directory, ok := args["directory"].(string)
 		if !ok || directory == "" {
 			return nil, fmt.Errorf("invalid or missing directory parameter")
 		}
@@ -373,15 +376,16 @@ func main() {
 		),
 	)
 	createTableHandler := func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		tableName, ok := req.Params.Arguments["table_name"].(string)
+		args := req.GetArguments()
+		tableName, ok := args["table_name"].(string)
 		if !ok || tableName == "" {
 			return nil, fmt.Errorf("invalid or missing table_name parameter")
 		}
-		headers, ok := req.Params.Arguments["headers"].(string)
+		headers, ok := args["headers"].(string)
 		if !ok || headers == "" {
 			return nil, fmt.Errorf("invalid or missing headers parameter")
 		}
-		values, ok := req.Params.Arguments["values"].(string)
+		values, ok := args["values"].(string)
 		if !ok {
 			return nil, fmt.Errorf("invalid or missing values parameter")
 		}
@@ -411,8 +415,9 @@ func main() {
 		),
 	)
 	readQueryHandler := func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		db, _ := req.Params.Arguments["db"].(string)
-		q, _ := req.Params.Arguments["query"].(string)
+		args := req.GetArguments()
+		db, _ := args["db"].(string)
+		q, _ := args["query"].(string)
 		cmd := exec.Command("sqlite3", "-csv", db, q)
 		out, err := cmd.CombinedOutput()
 		if err != nil {
@@ -438,8 +443,9 @@ func main() {
 		),
 	)
 	writeQueryHandler := func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		db, _ := req.Params.Arguments["db"].(string)
-		q, _ := req.Params.Arguments["query"].(string)
+		args := req.GetArguments()
+		db, _ := args["db"].(string)
+		q, _ := args["query"].(string)
 		cmd := exec.Command("sqlite3", db, q)
 		out, err := cmd.CombinedOutput()
 		if err != nil {
@@ -465,8 +471,9 @@ func main() {
 		),
 	)
 	createSQLTableHandler := func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		db, _ := req.Params.Arguments["db"].(string)
-		def, _ := req.Params.Arguments["definition"].(string)
+		args := req.GetArguments()
+		db, _ := args["db"].(string)
+		def, _ := args["definition"].(string)
 		cmd := exec.Command("sqlite3", db, def)
 		out, err := cmd.CombinedOutput()
 		if err != nil {
@@ -488,7 +495,8 @@ func main() {
 		),
 	)
 	listTablesHandler := func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		db, _ := req.Params.Arguments["db"].(string)
+		args := req.GetArguments()
+		db, _ := args["db"].(string)
 		sql := `SELECT name FROM sqlite_master WHERE type='table' ORDER BY name;`
 		cmd := exec.Command("sqlite3", "-csv", db, sql)
 		out, err := cmd.CombinedOutput()
