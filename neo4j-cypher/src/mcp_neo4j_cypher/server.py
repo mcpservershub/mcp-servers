@@ -3,7 +3,7 @@ import logging
 import re
 import sys
 import time
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 import mcp.types as types
 from mcp.server.fastmcp import FastMCP
@@ -18,45 +18,6 @@ from neo4j.exceptions import DatabaseError
 from pydantic import Field
 
 logger = logging.getLogger("mcp_neo4j_cypher")
-
-
-def healthcheck(db_url: str, username: str, password: str, database: str) -> None:
-    """
-    Confirm that Neo4j is running before continuing.
-    Creates a a sync Neo4j driver instance for checking connection and closes it after connection is established.
-    """
-
-    print("Confirming Neo4j is running...", file=sys.stderr)
-    sync_driver = GraphDatabase.driver(
-        db_url,
-        auth=(
-            username,
-            password,
-        ),
-    )
-    attempts = 0
-    success = False
-    print("\nWaiting for Neo4j to Start...\n", file=sys.stderr)
-    time.sleep(3)
-    ex = DatabaseError()
-    while not success and attempts < 3:
-        try:
-            with sync_driver.session(database=database) as session:
-                session.run("RETURN 1")
-            success = True
-            sync_driver.close()
-        except Exception as e:
-            ex = e
-            attempts += 1
-            print(
-                f"failed connection {attempts} | waiting {(1 + attempts) * 2} seconds...",
-                file=sys.stderr,
-            )
-            print(f"Error: {e}", file=sys.stderr)
-            time.sleep((1 + attempts) * 2)
-    if not success:
-        sync_driver.close()
-        raise ex
 
 
 async def _read(tx: AsyncTransaction, query: str, params: dict[str, Any]) -> str:
@@ -172,11 +133,12 @@ RETURN label, apoc.map.fromPairs(attributes) as attributes, apoc.map.fromPairs(r
     return mcp
 
 
-def main(
+async def main(
     db_url: str,
     username: str,
     password: str,
     database: str,
+    transport: Literal["stdio", "sse"] = "stdio",
 ) -> None:
     logger.info("Starting MCP neo4j Server")
 
@@ -190,9 +152,13 @@ def main(
 
     mcp = create_mcp_server(neo4j_driver, database)
 
-    healthcheck(db_url, username, password, database)
-
-    mcp.run(transport="stdio")
+    match transport:
+        case "stdio":
+            await mcp.run_stdio_async()
+        case "sse":
+            await mcp.run_sse_async()
+        case _:
+            raise ValueError(f"Invalid transport: {transport} | Must be either 'stdio' or 'sse'")
 
 
 if __name__ == "__main__":

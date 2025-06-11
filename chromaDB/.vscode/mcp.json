@@ -1,0 +1,14 @@
+{
+    "servers": {
+        "mcp": {
+            "command": "uvx",
+            "args": [
+                "chroma-mcp",
+                "--client-type",
+                "persistent",
+                "--data-dir",
+                "/home/santosh/mcp-servers/mcp-data/chroma.sqlite3"
+            ]
+        }
+    },
+}

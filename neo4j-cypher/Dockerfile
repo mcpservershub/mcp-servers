@@ -1,25 +1,26 @@
-FROM cgr.dev/chainguard/python:latest-dev as dev
+FROM cgr.dev/chainguard/wolfi-base
 
+RUN apk update && apk add python-3.12 py3.12-pip py3.12-setuptools
+# Set working directory
 WORKDIR /app
 
-RUN python -m venv venv
-ENV PATH="/app/venv/bin":$PATH
-COPY requirements.txt requirements.txt
-RUN pip install -r requirements.txt
+# Install build dependencies
+RUN pip install --no-cache-dir hatchling
 
-FROM cgr.dev/chainguard/python:latest
+COPY pyproject.toml /app/
 
-WORKDIR /app
+# Install dependencies
+RUN pip install --no-cache-dir neo4j>=5.26.0 mcp>=1.6.0
+
 
 # Copy the source code
 COPY src/ /app/src/
 
-COPY --from=dev /app/venv /app/venv
-ENV PATH="/app/venv/bin:$PATH"
-
+RUN pip install --no-cache-dir -e .
 # Environment variables for Neo4j connection
 ENV NEO4J_URL="bolt://host.docker.internal:7687"
 ENV NEO4J_USERNAME="neo4j"
 ENV NEO4J_PASSWORD="password"
 
-ENTRYPOINT [ "python", "mcp-neo4j-cypher.py --db-url ${NEO4J_URL} --username ${NEO4J_USERNAME} --password ${NEO4J_PASSWORD}"] ]
+# Command to run the server using the package entry point
+CMD ["sh", "-c", "mcp-neo4j-cypher --db-url ${NEO4J_URL} --username ${NEO4J_USERNAME} --password ${NEO4J_PASSWORD}"]

@@ -1,30 +1,28 @@
-from typing import Dict, List, Optional, TypedDict
-from enum import Enum
-import chromadb
-from mcp.server.fastmcp import FastMCP
-import os
-from dotenv import load_dotenv
 import argparse
-from chromadb.config import Settings
-import ssl
-import uuid
-import time
 import json
+import os
+import ssl
+import time
+import uuid
+from enum import Enum
+from typing import Dict, List, Optional, TypedDict
+
+from chromadb.api import EmbeddingFunction
+from chromadb.api.collection_configuration import (
+    CreateCollectionConfiguration, CreateHNSWConfiguration,
+    UpdateCollectionConfiguration, UpdateHNSWConfiguration)
+from chromadb.config import Settings
+from chromadb.utils.embedding_functions import (CohereEmbeddingFunction,
+                                                DefaultEmbeddingFunction,
+                                                JinaEmbeddingFunction,
+                                                OpenAIEmbeddingFunction,
+                                                RoboflowEmbeddingFunction,
+                                                VoyageAIEmbeddingFunction)
+from dotenv import load_dotenv
+from mcp.server.fastmcp import FastMCP
 from typing_extensions import TypedDict
 
-
-from chromadb.api.collection_configuration import (
-    CreateCollectionConfiguration, CreateHNSWConfiguration, UpdateHNSWConfiguration, UpdateCollectionConfiguration
-    )
-from chromadb.api import EmbeddingFunction
-from chromadb.utils.embedding_functions import (
-    DefaultEmbeddingFunction,
-    CohereEmbeddingFunction,
-    OpenAIEmbeddingFunction,
-    JinaEmbeddingFunction,
-    VoyageAIEmbeddingFunction,
-    RoboflowEmbeddingFunction,
-)
+import chromadb
 
 # Initialize FastMCP server
 mcp = FastMCP("chroma")

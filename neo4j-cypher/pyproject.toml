@@ -1,0 +1,19 @@
+[project]
+name = "mcp-neo4j-cypher"
+version = "0.2.2"
+description = "A simple Neo4j MCP server"
+requires-python = ">=3.10"
+dependencies = [
+    "mcp[cli]>=1.6.0",
+    "neo4j>=5.26.0",
+    "pydantic>=2.10.1",
+]
+[tool.hatch.build.targets.wheel]
+packages = ["src/mcp_neo4j_cypher"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.scripts]
+mcp-neo4j-cypher = "mcp_neo4j_cypher:main"

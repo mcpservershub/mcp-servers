@@ -12,14 +12,16 @@ def main():
     parser.add_argument("--username", default=None, help="Neo4j username")
     parser.add_argument("--password", default=None, help="Neo4j password")
     parser.add_argument("--database", default=None, help="Neo4j database name")
+    parser.add_argument("--transport", default="stdio", help="Transport type")
 
     args = parser.parse_args()
     asyncio.run(
         server.main(
-            args.db_url or os.getenv("NEO4J_URI", "bolt://localhost:7687"),
+            args.db_url or os.getenv("NEO4J_URL") or os.getenv("NEO4J_URI", "bolt://localhost:7687"),
             args.username or os.getenv("NEO4J_USERNAME", "neo4j"),
             args.password or os.getenv("NEO4J_PASSWORD", "password"),
             args.database or os.getenv("NEO4J_DATABASE", "neo4j"),
+            args.transport,
         )
     )
 

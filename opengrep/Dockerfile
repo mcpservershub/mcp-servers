@@ -1,13 +1,12 @@
 # Use an official Python runtime as a parent image
-FROM python:3.12-slim
+FROM cgr.dev/chainguard/python:latest-dev
+USER root
 
 # Set the working directory in the container
 WORKDIR /server
 
 # Install curl so we can fetch the opengrep binary
-RUN apt-get update && \
-  apt-get install -y --no-install-recommends curl && \
-  rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache curl
 
 # Download the opengrep CLI and install it into /usr/local/bin (which is in PATH)
 RUN curl -L \

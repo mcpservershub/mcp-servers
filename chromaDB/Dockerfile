@@ -1,0 +1,19 @@
+# TODO: Convert to Single stage as causing depedency resolution error in 2nd stage for voyageai
+
+FROM cgr.dev/chainguard/wolfi-base AS dev
+
+WORKDIR /app
+
+RUN apk update && apk add python-3.11 py3.11-pip 
+
+RUN python -m venv venv
+ENV PATH="/app/venv/bin":$PATH
+COPY . /app
+RUN pip install .
+
+# Expose any necessary ports if needed (e.g., 8080)
+EXPOSE 8080
+
+# Command to run MCP server
+CMD ["chroma-mcp", "--dotenv-path=/app/.env"]
+

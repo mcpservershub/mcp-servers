@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "chroma": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--network",
+        "chromadb",
+        "santoshkal/chromadb-mcp:test"
+      ]
+    }
+  }
+}
