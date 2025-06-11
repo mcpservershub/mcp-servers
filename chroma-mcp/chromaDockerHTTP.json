@@ -5,6 +5,8 @@
       "args": [
         "run",
         "-i",
+        "--mount",
+        "type=bind,src=/home/santosh/mcp-servers/chroma-mcp/.env,dst=/app/.chroma_env",
         "--network",
         "chromadb",
         "santoshkal/chromadb-mcp:test"

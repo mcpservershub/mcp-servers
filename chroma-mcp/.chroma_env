@@ -1,0 +1,5 @@
+CHROMA_DOTENV_PATH="/app/.chroma_env"
+CHROMA_CLIENT_TYPE="http"
+CHROMA_HOST="chromadb"
+CHROMA_PORT="8000"
+CHROMA_SSL="false"
