@@ -18,7 +18,7 @@ package-dir = {"" = "src"}
 
 [tool.hatch.build.targets.wheel]
 # The list of importable packages to include
-packages = ["gitingest_mcp"]
+packages = ["src/gitingest_mcp"]
 
 [project.scripts]
 # This creates a console entrypoint called `gitingest-mcp`
