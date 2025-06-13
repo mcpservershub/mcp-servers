@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "gitingest": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--mount",
+        "type=bind,src=/home/a0557/genval,dst=/app/genval",
+        "santoshkal/gitingest-mcp:test"
+      ]
+    }
+  }
+}

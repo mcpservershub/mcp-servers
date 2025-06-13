@@ -1,0 +1,2 @@
+[console_scripts]
+gitingest-mcp = gitingest_mcp.server:main
