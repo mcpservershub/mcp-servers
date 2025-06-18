@@ -5,9 +5,11 @@ FROM cgr.dev/chainguard/node:latest-dev AS builder
 # Set the working directory
 WORKDIR /app
 USER root
+
+
 # Copy package.json and package-lock.json
 COPY package.json package-lock.json ./
-RUN apk update && apk add chromium
+
 # Install dependencies without running scripts to prevent automatic build
 RUN npm install --ignore-scripts
 
@@ -24,17 +26,28 @@ FROM cgr.dev/chainguard/node:latest-dev AS release
 # Set the working directory
 WORKDIR /app
 
-# Set Playwright environment variables to use system Chromium
-ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
-ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser
+# Install Chromium and its dependencies
+RUN apk update && apk add --no-cache \
+  chromium \
+  chromium-chromedriver \
+  Xvfb \
+  dbus 
+
 # Copy the built files from the builder stage
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/package-lock.json ./package-lock.json
-COPY --from=builder /usr/bin/chromium /usr/bin/chromium
 
 # Install production dependencies
 RUN npm ci --ignore-scripts --omit=dev
+
+# Set Playwright environment variables to use system Chromium
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
+# Create a non-root user for running the application
+RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
+USER nodejs
 
 # Set the command to run the server
 ENTRYPOINT ["node", "dist/index.js"]
