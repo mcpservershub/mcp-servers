@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "taskmaster": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "--mount",
+        "type=bind,src=/home/santosh/mcp-servers/claude-task-master/.env,dst=/app/.env",
+        "--mount",
+        "type=bind,src=/home/santosh/mcpserver,dst=/app/mcpserver",
+        "santoshkal/task-master-mcp:cgr"
+      ]
+    }
+  }
+}
