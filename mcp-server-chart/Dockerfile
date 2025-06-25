@@ -30,4 +30,4 @@ COPY --from=builder /app/package-lock.json ./package-lock.json
 RUN npm ci --ignore-scripts --omit=dev
 
 # Run the app
-CMD ["node", "build/index.js" ]
+CMD ["build/index.js" ]

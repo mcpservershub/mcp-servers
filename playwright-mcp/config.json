@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "--mount",
+        "type=bind,src=/home/santosh/test-fe,dst=/app/test-fe",
+        "santoshkal/playwright:test"
+      ]
+    }
+  }
+}
