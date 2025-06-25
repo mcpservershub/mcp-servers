@@ -7,9 +7,9 @@
         "-i",
         "--rm",
         "--mount",
-        "type=bind,src=/home/santosh/mcp-servers/claude-task-master/.env,dst=/app/.env",
+        "type=bind,src=/home/santosh/mcp-servers/claude-task-master/.env,dst=/app/.env:ro",
         "--mount",
-        "type=bind,src=/home/santosh/mcpserver,dst=/app/mcpserver",
+        "type=bind,src=/home/santosh/mcpserver,dst=/app/mcpserver:rw",
         "santoshkal/task-master-mcp:cgr"
       ]
     }

@@ -29,15 +29,15 @@ COPY --from=builder /app ./
 # Create non-root user & data dir, fix ownership
 USER root
 
-# RUN addgroup -g 1001 -S nodejs \
-#     && adduser    -u 1001 -S taskmaster -G nodejs 
-#
-# RUN mkdir -p /app/data \
-#     && chown -R taskmaster:nodejs /app 
+RUN addgroup -g 1001 -S nodejs \
+    && adduser    -u 1001 -S taskmaster -G nodejs 
+
+RUN mkdir -p /app/data \
+    && chown -R taskmaster:nodejs /app 
 
 
 # Switch into non-root user
-# USER taskmaster
+USER taskmaster
 
 # Expose port
 EXPOSE 3000
