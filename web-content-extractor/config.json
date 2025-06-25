@@ -1,0 +1,15 @@
+{
+  "mcpServer": {
+    "webcontent-mcp": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "--mount",
+        "type=bind,src=/home/santosh/mcp-servers/web-content-extractor/output/,dst=/app/output:rw",
+        "santoshkal/webcontent-mcp:test"
+      ]
+    }
+  }
+}

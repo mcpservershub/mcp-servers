@@ -1,6 +1,6 @@
 # Use Node.js 20 Alpine for smaller image size
-FROM node:20-alpine
-
+FROM cgr.dev/chainguard/node:latest
+USER root
 # Set working directory
 WORKDIR /app
 
@@ -41,13 +41,4 @@ RUN npm prune --production
 # ENV NODE_ENV=production
 
 # Default command to run the MCP server
-CMD ["npm", "start"]
-
-# # Add health check
-# HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-#   CMD node -e "console.log('MCP Server is running')" || exit 1
-#
-# # Labels for better maintainability
-# LABEL maintainer="mcp-server"
-# LABEL description="Web Content Extractor MCP Server"
-# LABEL version="1.0.0"
+ENTRYPOINT ["npm", "start"]
