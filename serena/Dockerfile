@@ -9,6 +9,7 @@ ENV PYTHONUNBUFFERED=1 \
 RUN apk update && apk add --no-cache python-3.11 py3.11-pip py3.11-setuptools git openssh-client go
 
 RUN go install golang.org/x/tools/gopls@latest
+ENV PATH="/root/go/bin":$PATH
 
 # Copy only the metadata + source for install
 COPY pyproject.toml README.md /workspace/serena/

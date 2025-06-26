@@ -19,8 +19,6 @@ classifiers = [
 ]
 dependencies = [
     "docker>=7.1.0",
-    "kubernetes>=30.1.0",
-    "podman>=5.2.0",
     "mcp[cli]"
 ]
 
