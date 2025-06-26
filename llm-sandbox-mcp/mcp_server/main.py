@@ -38,57 +38,6 @@ def start_sandbox(
     except Exception as e:
         return {"status": "Failed to start or execute in sandbox.", "error": str(e)}
 
-@mcp.tool()
-def list_sandboxes():
-    """
-    Lists active sandbox environments.
-    """
-    try:
-        # Placeholder: In a real scenario, this would interact with the llm-sandbox backend
-        # to list active sessions or templates.
-        return {"status": "Not implemented yet. Placeholder for listing sandboxes."}
-    except Exception as e:
-        return {"status": "Failed to list sandboxes.", "error": str(e)}
-
-@mcp.tool()
-def stop_sandbox(session_id: str):
-    """
-    Stops and cleans up a specific sandbox session.
-
-    :param session_id: The ID of the sandbox session to stop.
-    """
-    try:
-        # Placeholder: In a real scenario, this would interact with the llm-sandbox backend
-        # to stop and clean up a specific session.
-        return {"status": f"Not implemented yet. Placeholder for stopping sandbox session {session_id}."}
-    except Exception as e:
-        return {"status": "Failed to stop sandbox.", "error": str(e)}
-
-@mcp.tool()
-def list_sandboxes():
-    """
-    Lists active sandbox environments.
-    """
-    try:
-        # Placeholder: In a real scenario, this would interact with the llm-sandbox backend
-        # to list active sessions or templates.
-        return {"status": "Not implemented yet. Placeholder for listing sandboxes."}
-    except Exception as e:
-        return {"status": "Failed to list sandboxes.", "error": str(e)}
-
-@mcp.tool()
-def stop_sandbox(session_id: str):
-    """
-    Stops and cleans up a specific sandbox session.
-
-    :param session_id: The ID of the sandbox session to stop.
-    """
-    try:
-        # Placeholder: In a real scenario, this would interact with the llm-sandbox backend
-        # to stop and clean up a specific session.
-        return {"status": f"Not implemented yet. Placeholder for stopping sandbox session {session_id}."}
-    except Exception as e:
-        return {"status": "Failed to stop sandbox.", "error": str(e)}
 
 if __name__ == "__main__":
     mcp.run()

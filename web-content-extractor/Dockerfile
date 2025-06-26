@@ -25,20 +25,5 @@ RUN npm run build
 # Remove development dependencies to reduce image size
 RUN npm prune --production
 
-
-#     adduser -S mcp -u 1001
-
-# Create directory for output files and set proper permissions for entire app
-# RUN mkdir -p /app/output && chown -R mcp:nodejs /app
-
-# # Switch to non-root user
-# USER mcp
-
-# Expose any ports if needed (MCP typically uses stdio, but for debugging)
-# EXPOSE 3000
-
-# # Set environment variables
-# ENV NODE_ENV=production
-
 # Default command to run the MCP server
 ENTRYPOINT ["npm", "start"]
