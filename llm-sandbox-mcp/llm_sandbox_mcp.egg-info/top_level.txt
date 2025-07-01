@@ -1,1 +1,1 @@
-mcp_server
+llm_sandbox_mcp
