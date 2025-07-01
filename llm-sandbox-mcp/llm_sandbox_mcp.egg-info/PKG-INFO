@@ -1,5 +1,5 @@
 Metadata-Version: 2.4
-Name: llm-sandbox
+Name: llm-sandbox-mcp
 Version: 0.3.0
 Summary: Lightweight and portable LLM sandbox runtime (code interpreter) Python library
 Author-email: Duy Huynh <vndee.huynh@gmail.com>

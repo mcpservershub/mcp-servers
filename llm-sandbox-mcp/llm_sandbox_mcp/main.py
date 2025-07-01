@@ -1,11 +1,12 @@
 import os
+
 from llm_sandbox import SandboxBackend, SandboxSession
 from mcp.server.fastmcp import FastMCP
 
 mcp = FastMCP()
 
 @mcp.tool()
-def start_sandbox(
+def execute_code(
     sandbox_source: str,
     code: str,
     keep_template: bool = False,

@@ -1,0 +1,19 @@
+{
+  "mcpServer": {
+    "llm-sandbox": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "--mount",
+        "type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock",
+        "--mount",
+        "type=bind,src=/home/santosh/mcp_workdir,dst=/app/mcp_workdir",
+        "--network",
+        "host",
+        "santoshkal/llm-sandbox-mcp:test"
+      ]
+    }
+  }
+}
