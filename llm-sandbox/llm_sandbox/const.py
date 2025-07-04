@@ -78,6 +78,7 @@ class SupportedLanguage(StrEnum):
     GO = "go"
     RUBY = "ruby"
     R = "r"
+    CSHARP = "csharp"
 
 
 @dataclass
@@ -95,3 +96,4 @@ class DefaultImage:
     GO = "ghcr.io/vndee/sandbox-go-123-bullseye"
     RUBY = "ghcr.io/vndee/sandbox-ruby-302-bullseye"
     R = "ghcr.io/vndee/sandbox-r-451-bullseye"
+    CSHARP = "ghcr.io/vndee/sandbox-csharp-8-bullseye"
