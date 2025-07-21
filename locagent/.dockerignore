@@ -1,0 +1,85 @@
+# Virtual environments
+venv/
+test_env/
+env/
+.env
+
+# Python cache and build artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Testing and coverage
+.coverage
+.pytest_cache/
+htmlcov/
+.tox/
+.nox/
+.cache
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Documentation (but keep README.md for pyproject.toml)
+docs/
+
+# Docker
+Dockerfile
+Dockerfile.*
+docker-compose.yml
+docker-compose.yaml
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+
+# Playground directories (can be large)
+playground/*/
+
+# Index files (will be regenerated)
+graph_index/
+bm25_index/
+
+# Test files
+tests/
+test_*.py
+*_test.py

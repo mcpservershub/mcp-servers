@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  zoekt-mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: zoekt-mcp-server:latest
+    container_name: zoekt-mcp-server
+    volumes:
+      # Persistent storage for Zoekt index files
+      - zoekt-data:/app/.zoekt
+      # Directory for cloned repositories
+      - zoekt-repos:/app/repos
+      # Optional: Mount local directories for development
+      # - ./data:/app/.zoekt
+      # - ./repos:/app/repos
+    environment:
+      - ZOEKT_INDEX_DIR=/app/.zoekt
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+    
+    # Optional: Health check
+    healthcheck:
+      test: ["CMD", "ls", "/usr/local/bin/zoekt-mcp-server"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  zoekt-data:
+    driver: local
+  zoekt-repos:
+    driver: local
