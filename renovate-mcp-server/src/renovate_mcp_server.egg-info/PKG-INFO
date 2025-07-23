@@ -1,0 +1,208 @@
+Metadata-Version: 2.4
+Name: renovate-mcp-server
+Version: 0.1.0
+Summary: MCP Server for Renovate - automated dependency updates
+Author-email: Your Name <your.email@example.com>
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.12
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+Requires-Dist: mcp[cli]>=1.0.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.21.0; extra == "dev"
+
+# Renovate MCP Server
+
+An MCP (Model Context Protocol) server for managing automated dependency updates using Renovate CLI.
+
+## Features
+
+This MCP server provides the following tools:
+
+1. **run_renovate** - Execute Renovate on specified repositories
+2. **check_config** - Validate Renovate configuration files
+3. **get_dependency_updates** - List available dependency updates
+4. **create_onboarding_pr** - Create initial Renovate configuration PR
+5. **get_renovate_logs** - Retrieve Renovate execution logs
+6. **manage_dashboard** - View/manage dependency dashboard
+7. **schedule_run** - Schedule or trigger Renovate runs
+8. **validate_credentials** - Test authentication and permissions
+
+## Prerequisites
+
+- Python 3.12+
+- Node.js and npm (for Renovate CLI)
+- Renovate CLI (`npm install -g renovate`)
+- A GitHub/GitLab/Bitbucket personal access token
+
+## Installation
+
+1. Clone this repository:
+```bash
+cd renovate-mcp-server
+```
+
+2. Create a virtual environment:
+```bash
+python3.12 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
+
+3. Install the package:
+```bash
+pip install -e .
+```
+
+4. Install Renovate CLI globally:
+```bash
+npm install -g renovate
+```
+
+## Configuration
+
+### Authentication
+
+Set your repository platform token as an environment variable:
+
+```bash
+export RENOVATE_TOKEN="your-github-token-here"
+```
+
+### MCP Client Configuration
+
+Add the server to your MCP client configuration:
+
+```json
+{
+  "servers": {
+    "renovate": {
+      "command": "python",
+      "args": ["-m", "renovate_mcp.server"],
+      "env": {
+        "RENOVATE_TOKEN": "your-token-here"
+      }
+    }
+  }
+}
+```
+
+Or if installed via pip:
+
+```json
+{
+  "servers": {
+    "renovate": {
+      "command": "renovate-mcp",
+      "env": {
+        "RENOVATE_TOKEN": "your-token-here"
+      }
+    }
+  }
+}
+```
+
+## Usage Examples
+
+### Running Renovate on a Repository
+
+```python
+# Basic run
+result = await run_renovate(
+    repositories=["owner/repo"],
+    platform="github"
+)
+
+# Dry run mode
+result = await run_renovate(
+    repositories=["owner/repo"],
+    platform="github",
+    dry_run=True
+)
+
+# Autodiscover repositories
+result = await run_renovate(
+    repositories=["owner/*"],
+    platform="github",
+    autodiscover=True
+)
+```
+
+### Checking for Available Updates
+
+```python
+updates = await get_dependency_updates(
+    repository="owner/repo",
+    branch="main",
+    filter="npm"
+)
+```
+
+### Creating an Onboarding PR
+
+```python
+result = await create_onboarding_pr(
+    repository="owner/repo",
+    config_template='{"extends": ["config:base"]}'
+)
+```
+
+### Validating Credentials
+
+```python
+result = await validate_credentials(
+    platform="github",
+    token="your-token"
+)
+```
+
+## Renovate Configuration
+
+Create a `renovate.json` file in your repository:
+
+```json
+{
+  "extends": [
+    "config:base"
+  ],
+  "schedule": [
+    "every weekend"
+  ],
+  "packageRules": [
+    {
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true
+    }
+  ]
+}
+```
+
+## Development
+
+### Running Tests
+
+```bash
+pytest tests/
+```
+
+### Building the Package
+
+```bash
+python -m build
+```
+
+## Troubleshooting
+
+1. **Authentication Issues**: Ensure your token has the necessary permissions (repo access, pull request creation)
+2. **Renovate Not Found**: Make sure Renovate CLI is installed globally: `npm install -g renovate`
+3. **Platform Access**: Some platforms may require additional configuration (e.g., GitLab requires API URL)
+
+## License
+
+MIT License
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.

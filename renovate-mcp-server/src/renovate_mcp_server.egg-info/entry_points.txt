@@ -1,0 +1,2 @@
+[console_scripts]
+renovate-mcp = renovate_mcp.server:main

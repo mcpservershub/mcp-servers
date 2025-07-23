@@ -1,0 +1,10 @@
+README.md
+pyproject.toml
+src/renovate_mcp/__init__.py
+src/renovate_mcp/server.py
+src/renovate_mcp_server.egg-info/PKG-INFO
+src/renovate_mcp_server.egg-info/SOURCES.txt
+src/renovate_mcp_server.egg-info/dependency_links.txt
+src/renovate_mcp_server.egg-info/entry_points.txt
+src/renovate_mcp_server.egg-info/requires.txt
+src/renovate_mcp_server.egg-info/top_level.txt
