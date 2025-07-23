@@ -1,0 +1,2 @@
+[console_scripts]
+syft-mcp-server = syft_mcp_server:main
