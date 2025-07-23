@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "llm-sandbox-mcp"
+version = "0.3.0"
+authors = [
+  { name="Duy Huynh", email="vndee.huynh@gmail.com" },
+]
+description = "Lightweight and portable LLM sandbox runtime (code interpreter) Python library"
+readme = "README.md"
+license = { text="MIT" }
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "docker>=7.1.0",
+    "mcp[cli]",
+    "llm-sandbox @ git+https://github.com/santoshkal/llm-sandbox.git"
+    # "llm-sandbox @ git+https://github.com/c-ravela/llm-sandbox.git"
+]
+
+[project.optional-dependencies]
+docker = ["docker"]
+kubernetes = ["kubernetes"]
+podman = ["podman"]
+minimal = []
+dev = [
+    "pytest>=8.2.2",
+    "pre-commit>=3.7.1",
+    "langchain>=0.2.7",
+    "langchain-openai>=0.1.15",
+    "langchainhub>=0.1.20",
+    "llama-index>=0.10.54.post1",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/vndee/llm-sandbox"
+"Repository" = "https://github.com/vndee/llm-sandbox"
+
+[project.scripts]
+llm-sandbox-mcp = "llm_sandbox_mcp.__main__:main"
+
+[tool.setuptools]
+packages = ["llm_sandbox_mcp"]

@@ -1,0 +1,140 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "locagent-mcp-server"
+version = "0.1.0"
+description = "Model Context Protocol (MCP) Server for LocAgent code localization tools"
+authors = [
+    {name = "LocAgent Team", email = "locagent@example.com"}
+]
+readme = "README.md"
+license = "Apache-2.0"
+requires-python = ">=3.8"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: Code Generators",
+]
+
+# Core dependencies required for MCP Server functionality
+dependencies = [
+    # Core MCP Framework
+    "fastmcp>=0.1.0",
+    
+    # CLI and Data Models
+    "click>=8.1.7",
+    "pydantic>=2.9.2",
+    
+    # Graph Processing and Network Analysis
+    "networkx>=3.4.2",
+    "matplotlib>=3.9.2",
+    
+    # Code Analysis and Parsing
+    "tree-sitter>=0.21.3",
+    "tree-sitter-languages>=1.10.2",
+    "libcst>=1.5.0",
+    
+    # LlamaIndex Core Components
+    "llama-index-core>=0.11.22",
+    "llama-index-retrievers-bm25>=0.4.0",
+    "llama-index-readers-file>=0.2.2",
+    "llama-index-embeddings-azure-openai>=0.2.5",
+    "llama-index-embeddings-openai>=0.2.5",
+    
+    # Text Processing and Search
+    "PyStemmer>=2.2.0.3",
+    "rapidfuzz>=3.10.1",
+    
+    # Vector Search
+    "faiss-cpu>=1.8.0",
+    "numpy>=1.26.4",
+    
+    # Dataset Loading
+    "datasets>=3.1.0",
+    
+    # Utilities
+    "requests>=2.32.3",
+    "tqdm>=4.67.0",
+    "PyYAML>=6.0.2",
+    "Jinja2>=3.1.4",
+    
+    # Additional dependencies for LocAgent integration
+    "pandas>=2.2.3",
+]
+
+[project.optional-dependencies]
+# Development dependencies
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=22.0.0",
+    "flake8>=5.0.0",
+    "mypy>=1.0.0",
+]
+
+# Full LLM integration (optional)
+llm = [
+    "openai>=1.54.3",
+    "litellm>=1.52.1",
+    "llama-index-llms-openai>=0.2.16",
+    "llama-index-embeddings-openai>=0.2.5",
+]
+
+# Azure OpenAI support (optional)
+azure = [
+    "azure-core>=1.32.0",
+    "azure-identity>=1.19.0",
+    "llama-index-llms-azure-openai>=0.2.2",
+    "llama-index-embeddings-azure-openai>=0.2.5",
+]
+
+# Interactive features (optional)
+interactive = [
+    "IPython>=8.29.0",
+    "jupyter_client>=8.6.3",
+]
+
+# PyTorch support (optional)
+torch = [
+    "torch>=2.5.1",
+]
+
+[project.scripts]
+locagent-mcp-server = "mcp_server.main:main"
+
+[project.urls]
+Homepage = "https://github.com/gersteinlab/LocAgent"
+Repository = "https://github.com/gersteinlab/LocAgent"
+Issues = "https://github.com/gersteinlab/LocAgent/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"*" = ["*.scm", "*.j2"]
+
+[tool.black]
+line-length = 100
+target-version = ["py38", "py39", "py310", "py311", "py312"]
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
