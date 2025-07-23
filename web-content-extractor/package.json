@@ -1,0 +1,26 @@
+{
+  "name": "web-content-extractor-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP Server for web content extraction using web-content-extractor library",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@wrtnlabs/web-content-extractor": "^1.0.0",
+    "node-fetch": "^3.3.2",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
+  },
+  "keywords": ["mcp", "web-content-extractor", "content-extraction"],
+  "author": "",
+  "license": "MIT"
+}

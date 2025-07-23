@@ -1,0 +1,17 @@
+description: Non-symbolic editing tools and general shell tool are excluded
+prompt: |
+  You are running in IDE assistant context where file operations, basic (line-based) edits and reads, 
+  and shell commands are handled by your own, internal tools.
+  The initial instructions and the current config inform you on which tools are available to you,
+  and how to use them.
+  Don't attempt to use any excluded tools, instead rely on your own internal tools
+  for achieving the basic file or shell operations.
+  However, if serena's tools can be used for achieving your task (see initial instructions), 
+  you should prioritize them.
+excluded_tools:
+  - create_text_file
+  - read_file
+  - delete_lines
+  - replace_lines
+  - insert_at_line
+  - execute_shell_command

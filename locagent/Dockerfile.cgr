@@ -1,0 +1,70 @@
+# Minimal MCP Server without PyTorch (much smaller image)
+FROM cgr.dev/chainguard/wolfi-base AS base
+
+# Install system dependencies
+RUN apk update && apk add git \
+  python-3.12 \
+  py3-pip \
+  py3-setuptools 
+
+# Set working directory
+WORKDIR /app
+
+RUN python -m venv venv
+ENV PATH="/app/venv/bin":$PATH
+
+# Copy source code
+COPY src ./src
+
+# Copy pyproject.toml and README.md first
+COPY pyproject.toml README.md ./
+
+RUN pip install --no-cache-dir -e .
+
+FROM cgr.dev/chainguard/wolfi-base AS final
+
+RUN apk update && apk add python-3.12
+WORKDIR /app
+
+# Copy source code
+COPY src ./src
+COPY plugins ./plugins
+COPY dependency_graph ./dependency_graph
+COPY repo_index ./repo_index
+COPY util ./util
+
+COPY --from=base /app/venv /app/venv
+
+
+# Copy entrypoint script and set permissions (before user switch)
+COPY docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
+
+# Create a non-root user
+RUN addgroup mcpuser && adduser -D -G mcpuser mcpuser 
+
+# Create required directories (as root before switching users)
+RUN mkdir -p /app/graph_index /app/bm25_index /app/playground
+
+RUN chown -R mcpuser:mcpuser /app
+
+# Switch to non-root user
+USER mcpuser
+
+# Set environment variables
+ENV PYTHONPATH="/app/src:/app"
+ENV PYTHONUNBUFFERED=1
+ENV GRAPH_INDEX_DIR="/app/graph_index"
+ENV BM25_INDEX_DIR="/app/bm25_index"
+ENV PATH="/app/venv/bin:$PATH"
+
+# Expose port for MCP server
+EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD /app/venv/bin/python -c "from mcp_server.server import app; print('Server healthy')" || exit 1
+
+# Default command
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
+CMD ["--log-level", "INFO"]
