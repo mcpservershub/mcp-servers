@@ -1,0 +1,85 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# Poetry
+poetry.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+.coverage
+.pytest_cache/
+htmlcov/
+.tox/
+.nox/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Dependency Check data
+data/
+dependency-check-data/
+
+# Output directories
+output/
+reports/
+scan-results/
+
+# Workspace (for local testing)
+workspace/
+example_workspace/
+
+# Suppression files (except examples)
+suppressions/*
+!suppressions/.gitkeep
+!suppressions/example-suppressions.xml
+
+# Logs
+*.log
+logs/
+
+# Docker volumes
+docker-volumes/
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Temporary files
+*.tmp
+*.bak
+.cache/

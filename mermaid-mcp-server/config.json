@@ -1,0 +1,14 @@
+{
+  "mcpServer": {
+    "mermaid": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--mount",
+        "type=bind,src=/home/santosh/mcp-servers/mermaid-mcp/diagrams,dst=/app/diagram",
+        "santoshkal/mermaid-mcp:test"
+      ]
+    }
+  }
+}

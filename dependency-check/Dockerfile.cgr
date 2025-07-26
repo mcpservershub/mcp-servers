@@ -1,0 +1,108 @@
+# Multi-stage Dockerfile for Dependency Check MCP Server
+
+# Stage 1: Download and setup Dependency Check
+FROM cgr.dev/chainguard/wolfi-base AS dev
+
+WORKDIR /work
+
+# Install required tools (Wolfi uses apk, not apt-get)
+RUN apk update && apk add --no-cache \
+    curl \
+    unzip \
+    bash
+
+# Download Dependency Check
+# First get the current version, then download it
+RUN DC_VERSION=$(curl -s https://dependency-check.github.io/DependencyCheck/current.txt) && \
+    echo "Downloading Dependency Check version: $DC_VERSION" && \
+    curl -Ls \
+    "https://github.com/dependency-check/DependencyCheck/releases/download/v${DC_VERSION}/dependency-check-${DC_VERSION}-release.zip" \
+    --output dependency-check.zip && \
+    unzip dependency-check.zip && \
+    ls -la && \
+    rm dependency-check.zip && \
+    mkdir -p /opt && \
+    mv dependency-check /opt/dependency-check || mv dependency-check-* /opt/dependency-check && \
+    chmod +x /opt/dependency-check/bin/dependency-check.sh && \
+    ls -la /opt/dependency-check/bin/
+
+# Stage 2: Python MCP Server with language runtimes
+FROM cgr.dev/chainguard/wolfi-base AS final
+
+# Copy Dependency Check from previous stage
+COPY --from=dev /opt/dependency-check /opt/dependency-check
+
+# Install Java runtime (required for Dependency Check) and other dependencies
+RUN apk update && apk add --no-cache \
+    openjdk-17 \
+    openjdk-17-jre \
+    openjdk-17-jre-base \
+    bash \
+    git \
+    nodejs \
+    npm \
+    go \
+    ruby \
+    ruby-dev \
+    php \
+    python-3.12 \
+    py3.12-pip
+
+# Install .NET runtime for assembly scanning
+RUN apk add --no-cache dotnet-8-runtime
+
+# Ensure dependency-check.sh is executable
+RUN chmod +x /opt/dependency-check/bin/dependency-check.sh
+
+# Set working directory
+WORKDIR /app
+
+# Copy Python package files
+COPY pyproject.toml ./
+COPY README.md ./
+COPY src/ ./src/
+
+# Install Python dependencies
+RUN python3 -m pip install --no-cache-dir --upgrade pip && \
+    python3 -m pip install --no-cache-dir -e .
+
+# Create necessary directories with proper permissions
+RUN mkdir -p /data/dependency-check /workspace /output && \
+    chmod -R 777 /data/dependency-check /workspace /output
+
+# Copy debug scripts
+COPY --chmod=755 debug_dockerfile.sh /usr/local/bin/debug_dockerfile.sh
+COPY --chmod=755 test_container.sh /usr/local/bin/test_container.sh
+
+# Set environment variables
+ENV DEPENDENCY_CHECK_HOME=/opt/dependency-check
+ENV PATH="${DEPENDENCY_CHECK_HOME}/bin:${PATH}"
+ENV PYTHONPATH="/app:${PYTHONPATH:-}"
+
+# Find and set JAVA_HOME
+RUN JAVA_HOME=$(find /usr/lib/jvm -name "java-17-openjdk*" -type d | head -n 1) && \
+    if [ -z "$JAVA_HOME" ]; then \
+        JAVA_HOME=$(find /usr/lib/jvm -type d -name "*openjdk*" | head -n 1); \
+    fi && \
+    echo "Found JAVA_HOME at: $JAVA_HOME" && \
+    echo "export JAVA_HOME=$JAVA_HOME" >> /etc/profile && \
+    echo "export PATH=\$JAVA_HOME/bin:\$PATH" >> /etc/profile
+
+# Set JAVA_HOME for the build process
+ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk
+
+# Debug: Check installation
+RUN echo "=== Checking Java installation ===" && \
+    find /usr -name java -type f 2>/dev/null | head -5 && \
+    echo "=== JAVA_HOME contents ===" && \
+    ls -la ${JAVA_HOME}/ || echo "JAVA_HOME not found" && \
+    echo "=== Checking java command ===" && \
+    which java || echo "java not in PATH" && \
+    ${JAVA_HOME}/bin/java -version || echo "Java execution failed" && \
+    echo "=== Checking Dependency Check ===" && \
+    ls -la /opt/dependency-check/bin/ && \
+    export PATH=${JAVA_HOME}/bin:${PATH} && \
+    /opt/dependency-check/bin/dependency-check.sh --version || echo "Dependency check version failed"
+
+# Set the default command
+CMD ["python3", "-m", "src.dependency_check_mcp.server"]

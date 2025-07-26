@@ -1,0 +1,88 @@
+# Multi-stage Dockerfile for Dependency Check MCP Server
+
+# Stage 1: Download and setup Dependency Check
+FROM cgr.dev/chainguard/wolfi-base AS dev
+
+WORKDIR /opt
+
+# Install required tools (Wolfi uses apk, not apt-get)
+RUN apk update && apk add --no-cache \
+    curl \
+    unzip
+
+# Download Dependency Check
+# First get the current version, then download it
+RUN DC_VERSION=$(curl -s https://dependency-check.github.io/DependencyCheck/current.txt) && \
+    echo "Downloading Dependency Check version: $DC_VERSION" && \
+    curl -Ls \
+    "https://github.com/dependency-check/DependencyCheck/releases/download/v${DC_VERSION}/dependency-check-${DC_VERSION}-release.zip" \
+    --output dependency-check.zip && \
+    unzip dependency-check.zip && \
+    rm dependency-check.zip && \
+    mv dependency-check /opt/dependency-check
+
+# Stage 2: Python MCP Server with language runtimes
+FROM cgr.dev/chainguard/wolfi-base AS final
+
+# Copy Dependency Check from previous stage
+COPY --from=dev /opt/dependency-check /opt/dependency-check
+
+# Install all required runtimes
+RUN apk update && apk add --no-cache \
+    # Java runtime for Dependency Check
+    openjdk-17-jre-headless \
+    # Python and pip
+    python-3.12 \
+    py3.12-pip \
+    # Version control
+    git \
+    # JavaScript/Node.js
+    nodejs \
+    npm \
+    # Go
+    go \
+    # Ruby
+    ruby \
+    ruby-dev \
+    # PHP
+    php \
+    php-cli \
+    # Build tools
+    build-base
+
+# Install .NET runtime for assembly scanning
+RUN apk add --no-cache dotnet-8-runtime
+
+# Set working directory
+WORKDIR /app
+
+# Copy Python package files
+COPY pyproject.toml ./
+COPY README.md ./
+COPY src/ ./src/
+
+# Install Python dependencies
+RUN python3 -m pip install --no-cache-dir --upgrade pip && \
+    python3 -m pip install --no-cache-dir -e .
+
+# Create necessary directories
+RUN mkdir -p /data/dependency-check /workspace /output
+
+# Set environment variables
+ENV DEPENDENCY_CHECK_HOME=/opt/dependency-check
+ENV PATH="${DEPENDENCY_CHECK_HOME}/bin:${PATH}"
+ENV PYTHONPATH=/app:${PYTHONPATH}
+
+# Create a non-root user (Chainguard images often run as non-root by default)
+RUN adduser -D -u 1000 mcp-user && \
+    chown -R mcp-user:mcp-user /app /data /workspace /output
+
+# Switch to non-root user
+USER mcp-user
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python3 -c "import sys; sys.exit(0)"
+
+# Set the default command
+CMD ["python3", "-m", "src.dependency_check_mcp.server"]
