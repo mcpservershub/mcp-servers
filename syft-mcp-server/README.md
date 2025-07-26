@@ -42,6 +42,26 @@ An MCP (Model Context Protocol) server that provides tools for SBOM (Software Bi
 
 ### Running the Server
 
+#### Docker
+
+```json
+{
+    "mcpServers": {
+        "syftScanner": {
+            "command": "docker",
+            "args": [
+                "run",
+                "-i",
+                "--mount",
+                "type=bind,src=/home/santosh/genval,dst=/app/genval",
+                "santoshkal/syft-mcp:test"
+            ]
+        }
+    }
+}
+```
+
+
 ```bash
 syft-mcp-server
 ```

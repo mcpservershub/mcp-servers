@@ -46,6 +46,26 @@ An MCP (Model Context Protocol) server that provides tools for vulnerability sca
 
 ### Running the Server
 
+ #### Docker:
+```json
+ {
+    "mcpServers": {
+        "syftScanner": {
+            "command": "docker",
+            "args": [
+                "run",
+                "-i",
+                "--mount",
+                "type=bind,src=/home/santosh/genval,dst=/app/genval",
+                "santoshkal/trvy-mcp:test"
+            ]
+        }
+    }
+}
+ ```
+
+Or:
+
 ```bash
 trivy-mcp-server
 ```
