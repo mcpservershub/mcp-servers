@@ -64,6 +64,12 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
+      - name: Install cosign
+        if: github.event_name != 'pull_request'
+        uses: sigstore/cosign-installer@v3.9.2
+        with:
+          cosign-release: 'v2.5.3'
+
       - name: Sign the images with GitHub OIDC Token
         if: github.event_name != 'pull_request'
         env:

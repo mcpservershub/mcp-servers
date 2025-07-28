@@ -20,22 +20,7 @@ An MCP (Model Context Protocol) server that provides tools for vulnerability sca
 ## Installation
 
 1. Install Trivy CLI:
-   ```bash
-   # For Ubuntu/Debian
-   sudo apt-get install wget apt-transport-https gnupg lsb-release
-   wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | sudo apt-key add -
-   echo deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main | sudo tee -a /etc/apt/sources.list.d/trivy.list
-   sudo apt-get update
-   sudo apt-get install trivy
-
-   # Or using snap
-   sudo snap install trivy
-
-   # Or download binary directly
-   wget https://github.com/aquasecurity/trivy/releases/download/v0.48.0/trivy_0.48.0_Linux-64bit.tar.gz
-   tar zxvf trivy_0.48.0_Linux-64bit.tar.gz
-   sudo mv trivy /usr/local/bin/
-   ```
+    Trivy is pre-installed in the MCP Server Container image.
 
 2. Install the MCP server:
    ```bash
