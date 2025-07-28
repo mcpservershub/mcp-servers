@@ -7,14 +7,14 @@ on:
     paths:
       - "postgres-mcp/**"
 
-permissions:
-  contents: read
-  packages: write
-  id-token: write
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
     env:
       PROJECT_NAME: postgres-mcp
       PROJECT_PATH: postgres-mcp

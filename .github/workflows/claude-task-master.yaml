@@ -7,14 +7,14 @@ on:
     paths:
       - "claude-task-master/**"
 
-permissions:
-  contents: read
-  packages: write
-  id-token: write
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
     env:
       PROJECT_NAME: claude-task-master
       PROJECT_PATH: claude-task-master

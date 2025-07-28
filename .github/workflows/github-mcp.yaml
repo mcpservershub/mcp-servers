@@ -7,14 +7,14 @@ on:
     paths:
       - "github-mcp/**"
 
-permissions:
-  contents: read
-  packages: write
-  id-token: write
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
     env:
       PROJECT_NAME: github-mcp
       PROJECT_PATH: github-mcp

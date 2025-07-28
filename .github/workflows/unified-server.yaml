@@ -7,14 +7,14 @@ on:
     paths:
       - "unified-server/**"
 
-permissions:
-  contents: read
-  packages: write
-  id-token: write
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
     env:
       PROJECT_NAME: unified-server
       PROJECT_PATH: unified-server
