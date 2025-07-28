@@ -1,65 +1,62 @@
 # Multi-stage Dockerfile for Dependency Check MCP Server
 
 # Stage 1: Download and setup Dependency Check
-FROM openjdk:11-jre-slim as dependency-check
-WORKDIR /opt
+FROM cgr.dev/chainguard/wolfi-base AS dev
 
-# Install required tools
-RUN apt-get update && apt-get install -y \
-    curl \
-    unzip \
-    && rm -rf /var/lib/apt/lists/*
+WORKDIR /work
+
+# Install required tools (Wolfi uses apk, not apt-get)
+RUN apk update && apk add --no-cache \
+  curl \
+  unzip \
+  bash
 
 # Download Dependency Check
-ENV DC_VERSION=9.0.7
-RUN curl -L -o dependency-check.zip \
-    https://github.com/jeremylong/DependencyCheck/releases/download/v${DC_VERSION}/dependency-check-${DC_VERSION}-release.zip \
-    && unzip dependency-check.zip \
-    && rm dependency-check.zip \
-    && mv dependency-check /opt/dependency-check
+# First get the current version, then download it
+RUN DC_VERSION=$(curl -s https://dependency-check.github.io/DependencyCheck/current.txt) && \
+  echo "Downloading Dependency Check version: $DC_VERSION" && \
+  curl -Ls \
+  "https://github.com/dependency-check/DependencyCheck/releases/download/v${DC_VERSION}/dependency-check-${DC_VERSION}-release.zip" \
+  --output dependency-check.zip && \
+  unzip dependency-check.zip && \
+  ls -la && \
+  rm dependency-check.zip && \
+  mkdir -p /opt && \
+  mv dependency-check /opt/dependency-check || mv dependency-check-* /opt/dependency-check && \
+  chmod +x /opt/dependency-check/bin/dependency-check.sh && \
+  ls -la /opt/dependency-check/bin/
 
 # Stage 2: Python MCP Server with language runtimes
-FROM python:3.12-slim
+FROM cgr.dev/chainguard/wolfi-base AS final
 
 # Copy Dependency Check from previous stage
-COPY --from=dependency-check /opt/dependency-check /opt/dependency-check
+COPY --from=dev /opt/dependency-check /opt/dependency-check
 
-# Install Java runtime (required for Dependency Check)
-RUN apt-get update && apt-get install -y \
-    openjdk-17-jre-headless \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install language runtimes for better scanning support
-RUN apt-get update && apt-get install -y \
-    # Version control
-    git \
-    # JavaScript/Node.js
-    nodejs \
-    npm \
-    # Go
-    golang \
-    # Ruby
-    ruby \
-    ruby-dev \
-    # Rust
-    cargo \
-    # PHP
-    php \
-    php-cli \
-    # Common build tools
-    build-essential \
-    # Cleanup
-    && rm -rf /var/lib/apt/lists/*
+# Install Java runtime (required for Dependency Check) and other dependencies
+RUN apk update && apk add --no-cache \
+  openjdk-17 \
+  openjdk-17-jre \
+  bash \
+  git \
+  nodejs \
+  npm \
+  go \
+  ruby \
+  ruby-dev \
+  php \
+  python-3.12 \
+  py3.12-pip
 
 # Install .NET runtime for assembly scanning
-RUN apt-get update && apt-get install -y \
-    wget \
-    && wget https://packages.microsoft.com/config/debian/11/packages-microsoft-prod.deb -O packages-microsoft-prod.deb \
-    && dpkg -i packages-microsoft-prod.deb \
-    && rm packages-microsoft-prod.deb \
-    && apt-get update && apt-get install -y \
-    dotnet-runtime-8.0 \
-    && rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache dotnet-8-runtime
+
+# Set JAVA in PATH
+ENV JAVA_HOME /usr/lib/jvm/java-17-openjdk
+ENV PATH "$PATH:${JAVA_HOME}/bin"
+
+
+# Ensure dependency-check.sh is executable
+RUN chmod +x /opt/dependency-check/bin/dependency-check.sh
 
 # Set working directory
 WORKDIR /app
@@ -70,27 +67,28 @@ COPY README.md ./
 COPY src/ ./src/
 
 # Install Python dependencies
-RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir -e .
+RUN python3 -m pip install --no-cache-dir --upgrade pip && \
+  python3 -m pip install --no-cache-dir -e .
 
-# Create necessary directories
-RUN mkdir -p /data/dependency-check /workspace /output
+
+# Create data directory for vulnerability database
+RUN mkdir -p /data/dependency-check && \
+    chmod 777 /data/dependency-check
 
 # Set environment variables
 ENV DEPENDENCY_CHECK_HOME=/opt/dependency-check
 ENV PATH="${DEPENDENCY_CHECK_HOME}/bin:${PATH}"
-ENV PYTHONPATH=/app:${PYTHONPATH}
+ENV PYTHONPATH="/app:${PYTHONPATH:-}"
+ENV DEPENDENCY_CHECK_DATA=/data/dependency-check
+ENV DISABLE_AUTO_UPDATE=false
+ENV JAVA_OPTS="-Xmx4G"
 
-# Create a non-root user
-RUN useradd -m -u 1000 mcp-user \
-    && chown -R mcp-user:mcp-user /app /data /workspace /output
 
-# Switch to non-root user
-USER mcp-user
+# Volume for persistent data
+VOLUME ["/data/dependency-check"]
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import sys; sys.exit(0)"
+# Volume for scanning projects
+VOLUME ["/workspace"]
 
 # Set the default command
-CMD ["python", "-m", "src.dependency_check_mcp.server"]
+CMD ["python3", "-m", "src.dependency_check_mcp.server"]

@@ -1,1 +1,0 @@
-"""Tests for Dependency Check MCP Server."""

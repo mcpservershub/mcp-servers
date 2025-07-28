@@ -2,7 +2,9 @@ version: '3.8'
 
 services:
   dependency-check-mcp:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.cgr
     image: dependency-check-mcp:latest
     container_name: dependency-check-mcp
     volumes:
@@ -25,6 +27,11 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       # Java memory settings
       - JAVA_OPTS=-Xmx4g -Xms512m
+      # Dependency Check settings
+      - DEPENDENCY_CHECK_DATA=/data/dependency-check
+      - DISABLE_AUTO_UPDATE=false
+    stdin_open: true
+    tty: true
     restart: unless-stopped
     # Resource limits
     deploy:

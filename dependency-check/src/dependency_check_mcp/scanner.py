@@ -115,12 +115,16 @@ class DependencyCheckScanner:
         cmd.extend(["--scan", path])
         cmd.extend(["--format", output_format])
         # Use the full output path directly
-        cmd.extend(["--out", str(output_path.parent)])
+        cmd.extend(["--out", str(output_path)])
         cmd.extend(["--project", output_path.stem])
         
         # Add prettyPrint for better output
         if output_format in ["JSON", "XML"]:
             cmd.append("--prettyPrint")
+        
+        # Add data directory if specified
+        if os.environ.get("DEPENDENCY_CHECK_DATA"):
+            cmd.extend(["--data", os.environ.get("DEPENDENCY_CHECK_DATA")])
         
         # Optional arguments
         if fail_on_cvss < 11:
@@ -139,6 +143,16 @@ class DependencyCheckScanner:
             
         if nvd_api_key:
             cmd.extend(["--nvdApiKey", nvd_api_key])
+        
+        # Check if database exists to decide on auto-update
+        data_dir = Path(os.environ.get("DEPENDENCY_CHECK_DATA", str(Path.home() / ".dependency-check" / "data")))
+        db_file = Path(data_dir) / "odc.mv.db"
+        has_database = db_file.exists()
+        
+        # Disable auto-update if running in container (should be done separately)
+        # or if database already exists (to speed up scans)
+        if os.environ.get("DISABLE_AUTO_UPDATE", "false").lower() == "true" or has_database:
+            cmd.append("--noupdate")
             
         if additional_args:
             cmd.extend(additional_args)
@@ -150,13 +164,42 @@ class DependencyCheckScanner:
             # Log full command for debugging
             logger.info(f"Executing command: {' '.join(cmd)}")
             
+            # For long-running scans, we need to handle timeouts better
+            # First check if this is the first run (database needs downloading)
+            first_run = not data_dir.exists() or not any(data_dir.iterdir()) if data_dir.exists() else True
+            
+            if first_run:
+                logger.warning("First run detected. Dependency Check will download vulnerability databases.")
+                logger.warning("This can take 5-30 minutes depending on your connection speed.")
+            
             process = await asyncio.create_subprocess_exec(
                 *cmd,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
+                env={**os.environ, "JAVA_OPTS": "-Xmx4G"}  # Increase memory for large scans
             )
             
-            stdout, stderr = await process.communicate()
+            # Use a longer timeout for first run or large scans
+            timeout = 1800 if first_run else 600  # 30 minutes for first run, 10 minutes otherwise
+            
+            try:
+                stdout, stderr = await asyncio.wait_for(
+                    process.communicate(),
+                    timeout=timeout
+                )
+            except asyncio.TimeoutError:
+                logger.error(f"Scan timed out after {timeout} seconds")
+                process.terminate()
+                await process.wait()
+                return ScanResult(
+                    success=False,
+                    report_path=output_file,
+                    total_dependencies=0,
+                    vulnerable_dependencies=0,
+                    total_vulnerabilities=0,
+                    scan_time_seconds=timeout,
+                    error_message=f"Scan timed out after {timeout} seconds. Try increasing timeout or scanning smaller directories.",
+                )
             
             scan_time = time.time() - start_time
             
@@ -186,11 +229,9 @@ class DependencyCheckScanner:
                     )
             
             # Check if output file was created
-            # Dependency Check creates files with specific naming: project-name-report.format
+            # When using --out with a file path, dependency-check creates the exact file
             expected_files = [
-                output_file,
-                output_path.parent / f"{output_path.stem}-report.{output_format.lower()}",
-                output_path.parent / f"dependency-check-report.{output_format.lower()}"
+                output_file
             ]
             
             actual_output_file = None
@@ -354,9 +395,25 @@ class DependencyCheckScanner:
                 *cmd,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
+                env={**os.environ, "JAVA_OPTS": "-Xmx4G"}
             )
             
-            stdout, stderr = await process.communicate()
+            # Database updates can take a very long time
+            try:
+                stdout, stderr = await asyncio.wait_for(
+                    process.communicate(),
+                    timeout=3600  # 1 hour timeout for database updates
+                )
+            except asyncio.TimeoutError:
+                logger.error("Database update timed out after 1 hour")
+                process.terminate()
+                await process.wait()
+                return {
+                    "success": False,
+                    "last_updated": "",
+                    "update_duration_seconds": 3600,
+                    "error_message": "Database update timed out after 1 hour",
+                }
             
             update_time = time.time() - start_time
             

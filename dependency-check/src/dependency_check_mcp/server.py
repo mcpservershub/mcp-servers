@@ -5,6 +5,7 @@ import logging
 from typing import Any, Dict
 
 from mcp.server import FastMCP
+from mcp.types import TextContent
 from pydantic import ValidationError
 
 from .models import (
@@ -37,7 +38,9 @@ def get_dc_tools():
     return _dc_tools
 
 
-@mcp.tool()
+@mcp.tool(
+    description="Scan a project for vulnerabilities. Note: First scan may take 5-10 minutes."
+)
 async def scan_project(
     path: str,
     output_file: str,
@@ -75,6 +78,9 @@ async def scan_project(
             enable_experimental=enable_experimental,
             nvd_api_key=nvd_api_key
         )
+        
+        # Send initial progress message
+        logger.info("Starting dependency check scan. This may take several minutes on first run...")
         
         result = await get_dc_tools().scan_project(args)
         

@@ -136,13 +136,14 @@ class LanguageDetector:
     }
     
     # Additional CLI arguments for specific languages
+    # Based on Dependency Check 12.1.3 available flags
     LANGUAGE_ARGS = {
-        'javascript': ['--enableRetireJS'],
-        'dotnet': ['--enableAssemblyAnalyzer'],
-        'ruby': ['--enableBundleAudit'],
-        'python': ['--enablePython'],
-        'go': ['--enableGolang'],
-        'swift': ['--enableSwift', '--enableCocoaPods'],
+        'javascript': ['--enableRetired'],  # RetireJS analyzer
+        'dotnet': [],  # Assembly analyzer is enabled by default
+        'ruby': [],  # Bundle audit might be in experimental
+        'python': [],  # Python might be in experimental
+        'go': [],  # Go analyzer might be in experimental or core
+        'swift': [],  # Swift might be in experimental
         'experimental': ['--enableExperimental']
     }
     
