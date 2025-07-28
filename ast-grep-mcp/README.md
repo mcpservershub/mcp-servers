@@ -18,17 +18,6 @@ ast-grep is a CLI tool for structural code search and manipulation that works ac
 
 ## Installation
 
-### Using Docker (Recommended)
-
-1. Build the Docker image:
-```bash
-docker build -t ast-grep-mcp .
-```
-
-2. Run the container:
-```bash
-docker run -i --rm -v /path/to/your/code:/workspace ast-grep-mcp
-```
 
 ### Local Installation
 
