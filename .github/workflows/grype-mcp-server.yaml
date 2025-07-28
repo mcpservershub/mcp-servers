@@ -19,7 +19,7 @@ jobs:
       PROJECT_NAME: grype-mcp-server
       PROJECT_PATH: grype-mcp-server
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: mcpservershub/${{ env.PROJECT_NAME }}
+      IMAGE_PREFIX: mcpservershub/grype-mcp-server
 
     steps:
       - name: Checkout repository

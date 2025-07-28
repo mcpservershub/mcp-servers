@@ -19,7 +19,7 @@ jobs:
       PROJECT_NAME: syft-mcp-server
       PROJECT_PATH: syft-mcp-server
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: mcpservershub/${{ env.PROJECT_NAME }}
+      IMAGE_PREFIX: mcpservershub/syft-mcp-server
 
     steps:
       - name: Checkout repository

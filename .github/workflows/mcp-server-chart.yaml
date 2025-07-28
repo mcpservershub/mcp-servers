@@ -19,7 +19,7 @@ jobs:
       PROJECT_NAME: mcp-server-chart
       PROJECT_PATH: mcp-server-chart
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: mcpservershub/${{ env.PROJECT_NAME }}
+      IMAGE_PREFIX: mcpservershub/mcp-server-chart
 
     steps:
       - name: Checkout repository

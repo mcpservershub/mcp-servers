@@ -19,7 +19,7 @@ jobs:
       PROJECT_NAME: chromaDB
       PROJECT_PATH: chromaDB
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: mcpservershub/${{ env.PROJECT_NAME }}
+      IMAGE_PREFIX: mcpservershub/chromaDB
 
     steps:
       - name: Checkout repository

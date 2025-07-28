@@ -19,7 +19,7 @@ jobs:
       PROJECT_NAME: brave-mcp
       PROJECT_PATH: brave-mcp
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: mcpservershub/${{ env.PROJECT_NAME }}
+      IMAGE_PREFIX: mcpservershub/brave-mcp
 
     steps:
       - name: Checkout repository

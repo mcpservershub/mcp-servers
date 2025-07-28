@@ -19,7 +19,7 @@ jobs:
       PROJECT_NAME: llm-sandbox-mcp
       PROJECT_PATH: llm-sandbox-mcp
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: mcpservershub/${{ env.PROJECT_NAME }}
+      IMAGE_PREFIX: mcpservershub/llm-sandbox-mcp
 
     steps:
       - name: Checkout repository

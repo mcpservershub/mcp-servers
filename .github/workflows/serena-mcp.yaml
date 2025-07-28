@@ -19,7 +19,7 @@ jobs:
       PROJECT_NAME: serena-mcp
       PROJECT_PATH: serena-mcp
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: mcpservershub/${{ env.PROJECT_NAME }}
+      IMAGE_PREFIX: mcpservershub/serena-mcp
 
     steps:
       - name: Checkout repository

@@ -19,7 +19,7 @@ jobs:
       PROJECT_NAME: ast-grep-mcp
       PROJECT_PATH: ast-grep-mcp
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: mcpservershub/${{ env.PROJECT_NAME }}
+      IMAGE_PREFIX: mcpservershub/ast-grep-mcp
 
     steps:
       - name: Checkout repository
