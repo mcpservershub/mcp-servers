@@ -43,6 +43,7 @@ An MCP (Model Context Protocol) server that provides tools for SBOM (Software Bi
 ### Running the Server
 
 #### Docker
+NOTE: Mount the required Project into the container to have the MCP Server access to the project.
 
 ```json
 {
