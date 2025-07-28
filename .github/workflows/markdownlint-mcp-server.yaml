@@ -19,7 +19,7 @@ jobs:
       PROJECT_NAME: markdownlint-mcp-server
       PROJECT_PATH: markdownlint-mcp-server
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: mcpservershub/markdownlint-mcp-server
+      IMAGE_PREFIX: ${{ github.repository_owner }}/markdownlint-mcp-server
 
     steps:
       - name: Checkout repository

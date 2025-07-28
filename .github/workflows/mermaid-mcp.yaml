@@ -19,7 +19,7 @@ jobs:
       PROJECT_NAME: mermaid-mcp
       PROJECT_PATH: mermaid-mcp
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: mcpservershub/mermaid-mcp
+      IMAGE_PREFIX: ${{ github.repository_owner }}/mermaid-mcp
 
     steps:
       - name: Checkout repository

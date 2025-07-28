@@ -19,7 +19,7 @@ jobs:
       PROJECT_NAME: markItDown-mcp
       PROJECT_PATH: markItDown-mcp
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: mcpservershub/markItDown-mcp
+      IMAGE_PREFIX: ${{ github.repository_owner }}/markItDown-mcp
 
     steps:
       - name: Checkout repository

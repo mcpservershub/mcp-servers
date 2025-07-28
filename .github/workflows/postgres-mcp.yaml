@@ -19,7 +19,7 @@ jobs:
       PROJECT_NAME: postgres-mcp
       PROJECT_PATH: postgres-mcp
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: mcpservershub/postgres-mcp
+      IMAGE_PREFIX: ${{ github.repository_owner }}/postgres-mcp
 
     steps:
       - name: Checkout repository

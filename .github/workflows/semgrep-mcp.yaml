@@ -19,7 +19,7 @@ jobs:
       PROJECT_NAME: semgrep-mcp
       PROJECT_PATH: semgrep-mcp
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: mcpservershub/semgrep-mcp
+      IMAGE_PREFIX: ${{ github.repository_owner }}/semgrep-mcp
 
     steps:
       - name: Checkout repository

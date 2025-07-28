@@ -19,7 +19,7 @@ jobs:
       PROJECT_NAME: web-content-extractor
       PROJECT_PATH: web-content-extractor
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: mcpservershub/web-content-extractor
+      IMAGE_PREFIX: ${{ github.repository_owner }}/web-content-extractor
 
     steps:
       - name: Checkout repository

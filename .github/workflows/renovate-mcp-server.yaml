@@ -19,7 +19,7 @@ jobs:
       PROJECT_NAME: renovate-mcp-server
       PROJECT_PATH: renovate-mcp-server
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: mcpservershub/renovate-mcp-server
+      IMAGE_PREFIX: ${{ github.repository_owner }}/renovate-mcp-server
 
     steps:
       - name: Checkout repository

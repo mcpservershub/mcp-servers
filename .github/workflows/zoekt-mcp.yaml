@@ -19,7 +19,7 @@ jobs:
       PROJECT_NAME: zoekt-mcp
       PROJECT_PATH: zoekt-mcp
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: mcpservershub/zoekt-mcp
+      IMAGE_PREFIX: ${{ github.repository_owner }}/zoekt-mcp
 
     steps:
       - name: Checkout repository

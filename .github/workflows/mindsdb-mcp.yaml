@@ -19,7 +19,7 @@ jobs:
       PROJECT_NAME: mindsdb-mcp
       PROJECT_PATH: mindsdb-mcp
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: mcpservershub/mindsdb-mcp
+      IMAGE_PREFIX: ${{ github.repository_owner }}/mindsdb-mcp
 
     steps:
       - name: Checkout repository

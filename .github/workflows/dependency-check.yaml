@@ -19,7 +19,7 @@ jobs:
       PROJECT_NAME: dependency-check
       PROJECT_PATH: dependency-check
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: mcpservershub/dependency-check
+      IMAGE_PREFIX: ${{ github.repository_owner }}/dependency-check
 
     steps:
       - name: Checkout repository

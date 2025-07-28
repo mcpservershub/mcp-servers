@@ -19,7 +19,7 @@ jobs:
       PROJECT_NAME: neo4j-cypher-mcp
       PROJECT_PATH: neo4j-cypher-mcp
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: mcpservershub/neo4j-cypher-mcp
+      IMAGE_PREFIX: ${{ github.repository_owner }}/neo4j-cypher-mcp
 
     steps:
       - name: Checkout repository

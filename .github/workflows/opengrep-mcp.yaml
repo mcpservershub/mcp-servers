@@ -19,7 +19,7 @@ jobs:
       PROJECT_NAME: opengrep-mcp
       PROJECT_PATH: opengrep-mcp
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: mcpservershub/opengrep-mcp
+      IMAGE_PREFIX: ${{ github.repository_owner }}/opengrep-mcp
 
     steps:
       - name: Checkout repository

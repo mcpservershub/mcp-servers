@@ -19,7 +19,7 @@ jobs:
       PROJECT_NAME: unified-server
       PROJECT_PATH: unified-server
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: mcpservershub/unified-server
+      IMAGE_PREFIX: ${{ github.repository_owner }}/unified-server
 
     steps:
       - name: Checkout repository
