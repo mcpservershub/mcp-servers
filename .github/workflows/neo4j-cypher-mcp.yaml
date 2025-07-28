@@ -7,14 +7,14 @@ on:
     paths:
       - "neo4j-cypher-mcp/**"
 
-permissions:
-  contents: read
-  packages: write
-  id-token: write
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
     env:
       PROJECT_NAME: neo4j-cypher-mcp
       PROJECT_PATH: neo4j-cypher-mcp

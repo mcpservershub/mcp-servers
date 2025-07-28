@@ -7,14 +7,14 @@ on:
     paths:
       - "markdownlint-mcp-server/**"
 
-permissions:
-  contents: read
-  packages: write
-  id-token: write
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
     env:
       PROJECT_NAME: markdownlint-mcp-server
       PROJECT_PATH: markdownlint-mcp-server

@@ -7,14 +7,14 @@ on:
     paths:
       - "mermaid-mcp-server/**"
 
-permissions:
-  contents: read
-  packages: write
-  id-token: write
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
     env:
       PROJECT_NAME: mermaid-mcp-server
       PROJECT_PATH: mermaid-mcp-server

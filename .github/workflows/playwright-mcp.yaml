@@ -7,14 +7,14 @@ on:
     paths:
       - "playwright-mcp/**"
 
-permissions:
-  contents: read
-  packages: write
-  id-token: write
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
     env:
       PROJECT_NAME: playwright-mcp
       PROJECT_PATH: playwright-mcp
