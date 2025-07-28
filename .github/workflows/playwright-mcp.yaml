@@ -19,7 +19,7 @@ jobs:
       PROJECT_NAME: playwright-mcp
       PROJECT_PATH: playwright-mcp
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: mcpservershub/${{ env.PROJECT_NAME }}
+      IMAGE_PREFIX: ${{ github.repository_owner }}/playwright-mcp
 
     steps:
       - name: Checkout repository

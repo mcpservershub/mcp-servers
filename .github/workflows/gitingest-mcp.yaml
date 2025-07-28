@@ -19,7 +19,7 @@ jobs:
       PROJECT_NAME: gitingest-mcp
       PROJECT_PATH: gitingest-mcp
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: mcpservershub/${{ env.PROJECT_NAME }}
+      IMAGE_PREFIX: ${{ github.repository_owner }}/gitingest-mcp
 
     steps:
       - name: Checkout repository

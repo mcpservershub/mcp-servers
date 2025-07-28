@@ -19,7 +19,7 @@ jobs:
       PROJECT_NAME: trivy-mcp-server
       PROJECT_PATH: trivy-mcp-server
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: mcpservershub/${{ env.PROJECT_NAME }}
+      IMAGE_PREFIX: ${{ github.repository_owner }}/trivy-mcp-server
 
     steps:
       - name: Checkout repository

@@ -19,7 +19,7 @@ jobs:
       PROJECT_NAME: neo4j-memory-mcp
       PROJECT_PATH: neo4j-memory-mcp
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: mcpservershub/${{ env.PROJECT_NAME }}
+      IMAGE_PREFIX: ${{ github.repository_owner }}/neo4j-memory-mcp
 
     steps:
       - name: Checkout repository

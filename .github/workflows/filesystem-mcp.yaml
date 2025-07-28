@@ -19,7 +19,7 @@ jobs:
       PROJECT_NAME: filesystem-mcp
       PROJECT_PATH: filesystem-mcp
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: mcpservershub/${{ env.PROJECT_NAME }}
+      IMAGE_PREFIX: ${{ github.repository_owner }}/filesystem-mcp
 
     steps:
       - name: Checkout repository

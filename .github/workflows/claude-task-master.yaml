@@ -19,7 +19,7 @@ jobs:
       PROJECT_NAME: claude-task-master
       PROJECT_PATH: claude-task-master
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: mcpservershub/${{ env.PROJECT_NAME }}
+      IMAGE_PREFIX: ${{ github.repository_owner }}/claude-task-master
 
     steps:
       - name: Checkout repository
