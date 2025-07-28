@@ -9,12 +9,12 @@ OWASP Dependency Check primarily analyzes **compiled artifacts** and **lock file
 - **.NET**: DLL, EXE assemblies
 - **JavaScript/Node.js**: package-lock.json, yarn.lock (with RetireJS)
 - **Ruby**: Gemfile.lock (with experimental flag)
-- **Python**: Requirements.txt, wheel files (with experimental flag)
 
 ### Limited or No Support:
 - **Go**: Go modules (go.mod/go.sum) are NOT natively supported by Dependency Check
 - **PHP**: Limited support via Composer
 - **Rust**: No native support for Cargo.toml/Cargo.lock
+- **Python**: Requirements.txt, wheel files (with experimental flag)
 
 ## Why Go Shows 0 Dependencies
 
