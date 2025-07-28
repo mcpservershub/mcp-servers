@@ -1,6 +1,11 @@
 name: Build & Push mermaid-mcp Docker Image
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - "mermaid-mcp/**"
   pull_request:
     branches:
       - main
@@ -55,11 +60,12 @@ jobs:
         with:
           context: ${{ env.PROJECT_PATH }}
           file: ${{ env.PROJECT_PATH }}/Dockerfile
-          push: true
+          push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
       - name: Sign the images with GitHub OIDC Token
+        if: github.event_name != 'pull_request'
         env:
           DIGEST: ${{ steps.build-and-push.outputs.digest }}
           TAGS: ${{ steps.meta.outputs.tags }}
