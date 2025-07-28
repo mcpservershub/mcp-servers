@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  dependency-check-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile.cgr
+    image: dependency-check-mcp:latest
+    container_name: dependency-check-mcp
+    volumes:
+      # Mount local projects for scanning (read-only)
+      - ${WORKSPACE_PATH:-./workspace}:/workspace:ro
+      # Output directory for scan reports
+      - ${OUTPUT_PATH:-./output}:/output
+      # Persistent database storage
+      - dependency-check-data:/data/dependency-check
+      # Suppression files
+      - ${SUPPRESSION_PATH:-./suppressions}:/suppressions:ro
+    environment:
+      # NVD API Key (recommended for faster updates)
+      - NVD_API_KEY=${NVD_API_KEY:-}
+      # Proxy settings (optional)
+      - HTTP_PROXY=${HTTP_PROXY:-}
+      - HTTPS_PROXY=${HTTPS_PROXY:-}
+      - NO_PROXY=${NO_PROXY:-}
+      # Logging level
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      # Java memory settings
+      - JAVA_OPTS=-Xmx4g -Xms512m
+      # Dependency Check settings
+      - DEPENDENCY_CHECK_DATA=/data/dependency-check
+      - DISABLE_AUTO_UPDATE=false
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+
+volumes:
+  dependency-check-data:
+    driver: local

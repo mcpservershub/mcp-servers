@@ -1,0 +1,2 @@
+[console_scripts]
+grype-mcp-server = grype_mcp_server:main

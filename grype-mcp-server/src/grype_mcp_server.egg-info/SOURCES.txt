@@ -1,0 +1,11 @@
+README.md
+pyproject.toml
+setup.py
+src/grype_mcp_server/__init__.py
+src/grype_mcp_server/server.py
+src/grype_mcp_server.egg-info/PKG-INFO
+src/grype_mcp_server.egg-info/SOURCES.txt
+src/grype_mcp_server.egg-info/dependency_links.txt
+src/grype_mcp_server.egg-info/entry_points.txt
+src/grype_mcp_server.egg-info/requires.txt
+src/grype_mcp_server.egg-info/top_level.txt
