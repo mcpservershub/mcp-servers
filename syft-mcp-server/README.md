@@ -19,18 +19,7 @@ An MCP (Model Context Protocol) server that provides tools for SBOM (Software Bi
 
 ## Installation
 
-1. Install Syft CLI:
-   ```bash
-   # Using curl (recommended)
-   curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
-
-   # Or using Homebrew (macOS/Linux)
-   brew install syft
-
-   # Or download binary directly
-   wget https://github.com/anchore/syft/releases/latest/download/syft_<VERSION>_linux_amd64.tar.gz
-   tar -xzf syft_<VERSION>_linux_amd64.tar.gz
-   sudo mv syft /usr/local/bin/
+Syfy binary is pre-installed in the MCP Server Container
    ```
 
 2. Install the MCP server:
