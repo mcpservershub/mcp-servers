@@ -173,3 +173,6 @@ npm run start
 ## 📄 License
 
 MIT@[AntV](https://github.com/antvis).
+
+---
+*Last updated: 2025-07-29 16:13:12 UTC*

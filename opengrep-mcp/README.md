@@ -166,3 +166,5 @@ Remember that paths in tool arguments refer to paths *inside* the container:
 ## License
 
 This MCP server is a wrapper around OpenGrep. Please refer to the OpenGrep/Semgrep license for usage terms.
+---
+*Last updated: 2025-07-29 16:13:12 UTC*

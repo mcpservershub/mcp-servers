@@ -47,3 +47,6 @@ docker run -p 8080:8080 locagent-mcp-server
 ## License
 
 Apache-2.0
+
+---
+*Last updated: 2025-07-29 16:13:12 UTC*

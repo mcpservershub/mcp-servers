@@ -48,3 +48,6 @@ The config to start the MCP Server in a container:
     - `query` (string): Local search terms
     - `count` (number, optional): Number of results (max 20)
   - Automatically falls back to web search if no local results found
+
+---
+*Last updated: 2025-07-29 16:13:12 UTC*

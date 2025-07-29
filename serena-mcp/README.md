@@ -851,3 +851,6 @@ Here is the full list of Serena's tools with a short description (output of `uv 
  * `think_about_task_adherence`: Thinking tool for determining whether the agent is still on track with the current task.
  * `think_about_whether_you_are_done`: Thinking tool for determining whether the task is truly completed.
  * `write_memory`: Writes a named memory (for future reference) to Serena's project-specific memory store.
+
+---
+*Last updated: 2025-07-29 16:13:12 UTC*

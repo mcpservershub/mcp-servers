@@ -150,3 +150,5 @@ The Docker image uses a multi-stage build:
 - **Size**: Optimized for minimal footprint
 
 All tool executions write detailed output to the specified output file, with a JSON summary returned to the client.
+---
+*Last updated: 2025-07-29 16:13:12 UTC*

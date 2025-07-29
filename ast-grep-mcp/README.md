@@ -126,3 +126,6 @@ When using Docker, ensure you only mount directories that the MCP server should 
 ## License
 
 This project is licensed under the same terms as the ast-grep-mcp package.
+
+---
+*Last updated: 2025-07-29 16:13:12 UTC*
