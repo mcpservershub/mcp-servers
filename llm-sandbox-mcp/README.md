@@ -24,3 +24,6 @@ file. This would require to mount a project directory to the container.
 ```
 
 Note: Change the `--mount` path while using the MCP Server
+
+---
+*Last updated: 2025-07-29 16:13:12 UTC*

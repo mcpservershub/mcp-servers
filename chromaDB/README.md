@@ -151,3 +151,6 @@ CHROMA_SSL="false" # SSL mode if using HTTP # Required
   - Raises:
     ValueError: If 'ids' is empty
     Exception: If the collection does not exist or if the delete operation fails.
+
+---
+*Last updated: 2025-07-29 16:13:12 UTC*

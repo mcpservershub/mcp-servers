@@ -284,3 +284,5 @@ The server automatically detects and configures scanning for:
 ## License
 
 This project is licensed under the MIT License. OWASP Dependency Check is licensed under the Apache 2.0 License.
+---
+*Last updated: 2025-07-29 16:13:12 UTC*

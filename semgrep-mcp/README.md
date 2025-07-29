@@ -252,3 +252,5 @@ docker build -t semgrep-mcp .
 ## License
 
 This MCP server is distributed under the MIT license. Semgrep itself has its own licensing terms.
+---
+*Last updated: 2025-07-29 16:13:12 UTC*

@@ -102,3 +102,5 @@ Add to your Claude Desktop MCP configuration:
 - `@wrtnlabs/web-content-extractor` - Web content extraction library
 - `node-fetch` - HTTP client for fetching web content
 - `zod` - Schema validation
+---
+*Last updated: 2025-07-29 16:13:12 UTC*
