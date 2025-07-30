@@ -20,8 +20,8 @@ jobs:
       packages: write
       id-token: write
     env:
-      PROJECT_NAME: mcp-server-chart
-      PROJECT_PATH: mcp-server-chart
+      PROJECT_NAME: graph-generator-mcp
+      PROJECT_PATH: graph-generator-mcp
       REGISTRY: ghcr.io
       IMAGE_PREFIX: ${{ github.repository_owner }}/graph-generator-mcp
 
