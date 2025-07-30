@@ -1,0 +1,191 @@
+{
+  "mcp_client_configurations": {
+    "claude_desktop": {
+      "description": "Configuration for Claude Desktop App",
+      "config_file_location": "~/Library/Application Support/Claude/claude_desktop_config.json",
+      "examples": {
+        "basic_local": {
+          "mcpServers": {
+            "postgres-local": {
+              "command": "mcp-server-postgres",
+              "args": ["postgresql://localhost:5432/mydb"]
+            }
+          }
+        },
+        "with_authentication": {
+          "mcpServers": {
+            "postgres-prod": {
+              "command": "mcp-server-postgres",
+              "args": ["postgresql://myuser:mypassword@prod.example.com:5432/production_db"]
+            }
+          }
+        },
+        "using_npx": {
+          "mcpServers": {
+            "postgres": {
+              "command": "npx",
+              "args": [
+                "-y",
+                "@modelcontextprotocol/server-postgres",
+                "postgresql://localhost:5432/mydb"
+              ]
+            }
+          }
+        },
+        "multiple_databases": {
+          "mcpServers": {
+            "postgres-dev": {
+              "command": "mcp-server-postgres",
+              "args": ["postgresql://localhost:5432/dev_db"]
+            },
+            "postgres-staging": {
+              "command": "mcp-server-postgres",
+              "args": ["postgresql://staging.example.com:5432/staging_db?sslmode=require"]
+            }
+          }
+        },
+        "docker_local": {
+          "mcpServers": {
+            "postgres": {
+              "command": "docker",
+              "args": [
+                "run",
+                "-i",
+                "--rm",
+                "--network", "host",
+                "postgres-mcp:latest",
+                "postgresql://localhost:5432/mydb"
+              ]
+            }
+          }
+        },
+        "docker_with_env": {
+          "mcpServers": {
+            "postgres": {
+              "command": "docker",
+              "args": [
+                "run",
+                "-i",
+                "--rm",
+                "--network", "bridge",
+                "-e", "PGHOST=host.docker.internal",
+                "postgres-mcp:latest",
+                "postgresql://user:password@host.docker.internal:5432/mydb"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "cline_vscode": {
+      "description": "Configuration for Cline VSCode Extension",
+      "config_file_location": "settings.json in VSCode",
+      "examples": {
+        "basic": {
+          "cline.mcpServers": {
+            "postgres": {
+              "command": "node",
+              "args": [
+                "/path/to/postgres-mcp/dist/index.js",
+                "postgresql://localhost:5432/mydb"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "continue_dev": {
+      "description": "Configuration for Continue.dev",
+      "config_file_location": "~/.continue/config.json",
+      "examples": {
+        "basic": {
+          "models": [],
+          "mcpServers": {
+            "postgres": {
+              "command": "mcp-server-postgres",
+              "args": ["postgresql://localhost:5432/mydb"]
+            }
+          }
+        }
+      }
+    }
+  },
+  "connection_string_examples": {
+    "local_development": {
+      "no_auth": "postgresql://localhost/mydb",
+      "with_auth": "postgresql://devuser:devpass@localhost/mydb",
+      "custom_port": "postgresql://localhost:5433/mydb",
+      "unix_socket": "postgresql:///mydb?host=/var/run/postgresql"
+    },
+    "remote_connections": {
+      "basic": "postgresql://user:password@db.example.com/mydb",
+      "with_ssl": "postgresql://user:password@db.example.com/mydb?sslmode=require",
+      "with_ssl_and_cert": "postgresql://user:password@db.example.com/mydb?sslmode=verify-full&sslcert=client.crt&sslkey=client.key",
+      "connection_timeout": "postgresql://user:password@db.example.com/mydb?connect_timeout=10",
+      "multiple_params": "postgresql://user:password@db.example.com:5432/mydb?sslmode=require&connect_timeout=10&application_name=mcp-server"
+    },
+    "special_cases": {
+      "password_with_special_chars": "postgresql://user:p%40ssw0rd%21@localhost/mydb",
+      "ipv6": "postgresql://user:password@[2001:db8::1234]/mydb",
+      "multiple_hosts_failover": "postgresql://user:password@host1,host2,host3/mydb?target_session_attrs=read-write"
+    }
+  },
+  "docker_compose_example": {
+    "version": "3.8",
+    "services": {
+      "postgres": {
+        "image": "postgres:15",
+        "environment": {
+          "POSTGRES_USER": "mcpuser",
+          "POSTGRES_PASSWORD": "mcppassword",
+          "POSTGRES_DB": "mcpdb"
+        },
+        "ports": ["5432:5432"],
+        "volumes": ["postgres_data:/var/lib/postgresql/data"]
+      },
+      "mcp-server": {
+        "build": ".",
+        "image": "postgres-mcp:latest",
+        "command": ["postgresql://mcpuser:mcppassword@postgres:5432/mcpdb"],
+        "depends_on": ["postgres"],
+        "stdin_open": true,
+        "tty": true
+      }
+    },
+    "volumes": {
+      "postgres_data": {}
+    }
+  },
+  "environment_variable_configuration": {
+    "description": "Using environment variables for sensitive data",
+    "shell_example": "export DATABASE_URL='postgresql://user:password@localhost/mydb'",
+    "mcp_config": {
+      "mcpServers": {
+        "postgres": {
+          "command": "sh",
+          "args": [
+            "-c",
+            "mcp-server-postgres \"$DATABASE_URL\""
+          ],
+          "env": {
+            "DATABASE_URL": "${DATABASE_URL}"
+          }
+        }
+      }
+    }
+  },
+  "security_best_practices": {
+    "read_only_user_setup": [
+      "CREATE USER mcp_reader WITH PASSWORD 'secure_password';",
+      "GRANT CONNECT ON DATABASE mydb TO mcp_reader;",
+      "GRANT USAGE ON SCHEMA public TO mcp_reader;",
+      "GRANT SELECT ON ALL TABLES IN SCHEMA public TO mcp_reader;",
+      "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO mcp_reader;"
+    ],
+    "connection_pooling": {
+      "description": "The server uses connection pooling by default",
+      "pool_size": "Default is 10 connections",
+      "idle_timeout": "Default is 10000ms"
+    }
+  }
+}
