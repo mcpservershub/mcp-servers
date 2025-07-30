@@ -5,10 +5,10 @@ USER root
 WORKDIR /app
 
 # Copy package files first for better caching
-COPY package*.json ./
+COPY package.json ./
 
 # Install dependencies
-RUN npm ci --only=production
+RUN npm install --omit=dev --no-fund --no-audit
 
 # Copy TypeScript configuration
 COPY tsconfig.json ./
