@@ -5,19 +5,16 @@ USER root
 WORKDIR /app
 
 # Copy package files first for better caching
-COPY package*.json ./
+COPY package.json ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install ALL dependencies (both production and dev)
+RUN npm install --no-fund --no-audit
 
 # Copy TypeScript configuration
 COPY tsconfig.json ./
 
 # Copy source code
 COPY src/ ./src/
-
-# Install development dependencies needed for building
-RUN npm install --save-dev typescript tsx @types/node
 
 # Build the TypeScript code
 RUN npm run build

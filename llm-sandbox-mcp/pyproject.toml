@@ -20,7 +20,7 @@ classifiers = [
 dependencies = [
     "docker>=7.1.0",
     "mcp[cli]",
-    "llm-sandbox @ git+https://github.com/santoshkal/llm-sandbox.git"
+    "llm-sandbox @ git+https://github.com/mcpservershub/llm-sandbox.git"
     # "llm-sandbox @ git+https://github.com/c-ravela/llm-sandbox.git"
 ]
 

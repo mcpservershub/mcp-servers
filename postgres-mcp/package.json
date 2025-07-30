@@ -19,12 +19,12 @@
     "watch": "tsc --watch"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "1.0.1",
-    "pg": "^8.13.0"
+    "@modelcontextprotocol/sdk": "1.17.0",
+    "pg": "8.16.3"
   },
   "devDependencies": {
-    "@types/pg": "^8.11.10",
-    "shx": "^0.3.4",
-    "typescript": "^5.6.2"
+    "@types/pg": "8.15.4",
+    "shx": "0.3.4",
+    "typescript": "5.6.2"
   }
 }

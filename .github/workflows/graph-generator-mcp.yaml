@@ -1,17 +1,16 @@
-name: Build & Push mermaid-mcp Docker Image
+name: Build & Push Graph-generator-MCP Docker Image
 
 on:
   push:
     branches:
       - main
     paths:
-      - "mermaid-mcp/**"
+      - "graph-generator-mcp/**"
   pull_request:
     branches:
       - main
     paths:
-      - "mermaid-mcp/**"
-
+      - "graph-generator-mcp/**"
 
 jobs:
   build-and-push:
@@ -21,10 +20,10 @@ jobs:
       packages: write
       id-token: write
     env:
-      PROJECT_NAME: mermaid-mcp
-      PROJECT_PATH: mermaid-mcp
+      PROJECT_NAME: graph-generator-mcp
+      PROJECT_PATH: graph-generator-mcp
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: ${{ github.repository_owner }}/mermaid-mcp
+      IMAGE_PREFIX: ${{ github.repository_owner }}/graph-generator-mcp
 
     steps:
       - name: Checkout repository
@@ -68,7 +67,7 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: sigstore/cosign-installer@v3.9.2
         with:
-          cosign-release: 'v2.5.3'
+          cosign-release: "v2.5.3"
 
       - name: Sign the images with GitHub OIDC Token
         if: github.event_name != 'pull_request'

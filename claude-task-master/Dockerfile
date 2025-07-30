@@ -7,12 +7,12 @@ RUN apk add --no-cache ca-certificates git \
     && rm -rf /var/cache/apk/*
 
 # Install only production packages
-COPY package*.json ./
+COPY package.json ./
 
-# Copy source (if you had a build step—e.g. `npm run build`—you’d run it here)
+# Copy source (if you had a build step—e.g. `npm run build`—you'd run it here)
 COPY . .
 
-RUN npm ci --only=production --silent
+RUN npm install --omit=dev --no-fund --no-audit
 
 #### Final stage
 FROM cgr.dev/chainguard/node:latest AS final

@@ -1,7 +1,11 @@
 #!/usr/bin/env node
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+} from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { extractContent } from "@wrtnlabs/web-content-extractor";
 import fetch from "node-fetch";
@@ -36,31 +40,53 @@ const GetContentArgsSchema = z.object({
 // extractContent returns a simple string with the main content
 
 class WebContentExtractorMCPServer {
-  private server: McpServer;
+  private server: Server;
 
   constructor() {
-    this.server = new McpServer({
+    this.server = new Server({
       name: "web-content-extractor-mcp-server",
       version: "1.0.0"
+    }, {
+      capabilities: {
+        tools: {}
+      }
     });
 
-    this.setupTools();
+    this.setupHandlers();
   }
 
-  private setupTools() {
-    this.server.registerTool(
-      "get_content",
-      {
-        title: "Web Content Extractor",
-        description: "Extract HTML content from a URL and save it to a file. Returns the extracted content including title, description, main content, and links.",
-        inputSchema: {
-          url: z.string().url("Must be a valid URL"),
-          output_file_path: z.string().min(1, "Output file path is required")
-        }
-      },
-      async (args) => {
+  private setupHandlers() {
+    this.server.setRequestHandler(ListToolsRequestSchema, async () => {
+      return {
+        tools: [
+          {
+            name: "get_content",
+            description: "Extract HTML content from a URL and save it to a file. Returns the extracted content including title, description, main content, and links.",
+            inputSchema: {
+              type: "object",
+              properties: {
+                url: {
+                  type: "string",
+                  format: "uri",
+                  description: "Must be a valid URL"
+                },
+                output_file_path: {
+                  type: "string",
+                  minLength: 1,
+                  description: "Output file path is required"
+                }
+              },
+              required: ["url", "output_file_path"]
+            }
+          }
+        ]
+      };
+    });
+
+    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
+      if (request.params.name === "get_content") {
         try {
-          const { url, output_file_path } = GetContentArgsSchema.parse(args);
+          const { url, output_file_path } = GetContentArgsSchema.parse(request.params.arguments);
 
           // Fetch HTML content from URL
           const response = await fetch(url);
@@ -134,7 +160,17 @@ class WebContentExtractorMCPServer {
           };
         }
       }
-    );
+      
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: `Unknown tool: ${request.params.name}`
+          }
+        ],
+        isError: true
+      };
+    });
   }
 
   async run() {
