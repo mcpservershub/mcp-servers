@@ -1,5 +1,5 @@
 [project]
-name = "cosign-mcp-server"
+name = "cosign-mcp"
 version = "0.1.0"
 description = "MCP Server for interacting with Cosign CLI tool"
 authors = [
@@ -14,7 +14,7 @@ dependencies = [
 ]
 
 [project.scripts]
-cosign-mcp-server = "src.server:main"
+cosign-mcp = "src.server:main"
 
 [build-system]
 requires = ["hatchling"]
