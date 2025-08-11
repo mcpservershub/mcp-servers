@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "hurl": {
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "-v", "${PWD}:/workspace:ro", "hurl-mcp-server"],
+      "transport": "stdio"
+    }
+  }
+}

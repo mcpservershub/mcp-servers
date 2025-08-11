@@ -1,0 +1,308 @@
+Metadata-Version: 2.4
+Name: tree-mcp-server
+Version: 0.1.0
+Summary: MCP server for tree command with robust features
+Author-email: Tree MCP Server <contact@example.com>
+License: MIT
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+Requires-Dist: mcp[cli]>=1.0.0
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.24.0; extra == "dev"
+
+# Tree MCP Server
+
+A Model Context Protocol (MCP) server that provides comprehensive tree command functionality through various specialized tools. Built with Python 3.12 and FastMCP for robust directory structure visualization.
+
+## Features
+
+The Tree MCP Server exposes the following tools:
+
+### Basic Tools
+
+1. **tree_basic** - Display basic directory tree structure
+   - `path`: Directory to display (default: current directory)
+   - `output_file`: Optional file to save output
+
+2. **tree_with_size** - Display tree with file sizes
+   - `path`: Directory path
+   - `human_readable`: Show sizes in KB/MB/GB format
+   - `output_file`: Optional output file
+
+3. **tree_directories_only** - Show only directories
+   - `path`: Directory path
+   - `max_depth`: Maximum depth to descend
+   - `output_file`: Optional output file
+
+4. **tree_with_permissions** - Display permissions and ownership
+   - `path`: Directory path
+   - `show_owner`: Include owner/group information
+   - `output_file`: Optional output file
+
+### Pattern Matching Tools
+
+5. **tree_with_pattern** - Filter with patterns
+   - `path`: Directory path
+   - `pattern`: Include pattern (e.g., "*.py")
+   - `exclude_pattern`: Exclude pattern
+   - `case_insensitive`: Case-insensitive matching
+   - `output_file`: Optional output file
+
+### Date and Time Tools
+
+6. **tree_with_dates** - Show modification dates
+   - `path`: Directory path
+   - `sort_by_time`: Sort by modification time
+   - `reverse_sort`: Reverse sort order
+   - `output_file`: Optional output file
+
+### Path Tools
+
+7. **tree_full_paths** - Display full path prefixes
+   - `path`: Directory path
+   - `max_depth`: Maximum depth
+   - `output_file`: Optional output file
+
+### Output Format Tools
+
+8. **tree_json_output** - Output in JSON format
+   - `path`: Directory path
+   - `max_depth`: Maximum depth
+   - `output_file`: Optional output file
+
+9. **tree_xml_output** - Output in XML/HTML format
+   - `path`: Directory path
+   - `max_depth`: Maximum depth
+   - `output_file`: Optional output file
+
+10. **tree_colorized** - Colorized output
+    - `path`: Directory path
+    - `force_colors`: Force colors even when piping
+    - `output_file`: Optional output file
+
+### Special Tools
+
+11. **tree_hidden_files** - Include hidden files
+    - `path`: Directory path
+    - `show_hidden`: Show hidden files
+    - `output_file`: Optional output file
+
+12. **tree_advanced** - Combined advanced options
+    - All parameters from other tools combined
+    - `output_format`: Choose "json", "xml", or "text"
+    - Complete control over tree output
+
+## Installation
+
+### Using uv (Recommended)
+
+```bash
+# Clone the repository
+git clone <repository-url>
+cd tree-mcp-server
+
+# Install with uv
+uv venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+uv pip install -e .
+```
+
+### Using pip
+
+```bash
+# Create virtual environment
+python3.12 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -e .
+```
+
+## Usage
+
+### Running the MCP Server
+
+```bash
+# Direct execution
+python -m tree_mcp.server
+
+# Or using the installed script
+tree-mcp
+
+# Or from src directory
+python src/tree_mcp/server.py
+```
+
+### Testing with MCP Inspector
+
+1. Install MCP Inspector:
+```bash
+npm install -g @modelcontextprotocol/inspector
+```
+
+2. Run the inspector:
+```bash
+mcp-inspector
+```
+
+3. Connect to the server:
+   - Click "Add Server"
+   - Enter command: `python /path/to/src/tree_mcp/server.py`
+   - Or: `python -m tree_mcp.server` (if installed)
+   - The tools will appear in the interface
+
+4. Test the tools:
+   - Select any tool from the list
+   - Fill in the parameters
+   - Click "Run" to execute
+
+### Running Tests
+
+```bash
+# Install test dependencies
+pip install pytest pytest-asyncio
+
+# Run tests from project root
+pytest tests/ -v
+
+# Or run specific test file
+pytest tests/test_server.py -v
+```
+
+## MCP Configuration
+
+### Standalone Application Configuration
+
+Add to your MCP client configuration file:
+
+```json
+{
+  "mcpServers": {
+    "tree-mcp": {
+      "command": "python",
+      "args": ["-m", "tree_mcp.server"],
+      "env": {"PYTHONPATH": "/path/to/tree-mcp-server"}
+    }
+  }
+}
+```
+
+### Using with Claude Desktop
+
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
+
+```json
+{
+  "mcpServers": {
+    "tree-mcp": {
+      "command": "python",
+      "args": ["/absolute/path/to/src/tree_mcp/server.py"]
+    }
+  }
+}
+```
+
+### Docker Usage
+
+#### Build the Image
+
+```bash
+docker build -t tree-mcp-server .
+```
+
+#### Run the Container
+
+```bash
+# Basic run
+docker run -it tree-mcp-server
+
+# With volume mount to access host directories
+docker run -it -v /path/on/host:/data:ro tree-mcp-server
+
+# For MCP client integration
+docker run -i tree-mcp-server
+```
+
+#### Docker Configuration for MCP Clients
+
+```json
+{
+  "mcpServers": {
+    "tree-mcp-docker": {
+      "command": "docker",
+      "args": ["run", "-i", "-v", "/:/host:ro", "tree-mcp-server"]
+    }
+  }
+}
+```
+
+## Environment Variables
+
+- `MCP_ENV`: Set to "production" in Docker, can be used for environment-specific behavior
+- `PYTHONUNBUFFERED`: Set to 1 for immediate output
+
+## Security Notes
+
+- The Docker image runs as a non-root user (mcpuser)
+- Host directories should be mounted as read-only (`:ro`) when possible
+- The server validates all paths before execution
+- File write operations are confined to specified output paths
+
+## Requirements
+
+- Python 3.12+
+- `tree` command installed on the system
+- Dependencies:
+  - `mcp[cli]` >= 1.0.0
+
+## Error Handling
+
+The server includes robust error handling for:
+- Invalid paths
+- Missing tree command
+- Invalid parameters
+- File write permissions
+- JSON/XML parsing errors
+
+All errors are returned in a structured format with clear messages.
+
+## Development
+
+### Project Structure
+
+```
+tree-mcp-server/
+├── src/
+│   └── tree_mcp/
+│       ├── __init__.py    # Package initialization
+│       ├── server.py      # Main MCP server implementation
+│       └── py.typed       # Type hints marker
+├── tests/
+│   ├── __init__.py        # Test package initialization
+│   └── test_server.py     # Test suite
+├── pyproject.toml         # Project configuration
+├── Dockerfile             # Multi-stage Docker build
+└── README.md             # This file
+```
+
+### Adding New Tools
+
+To add a new tree tool:
+
+1. Add a new `@mcp.tool()` decorated function in `src/tree_mcp/server.py`
+2. Follow the parameter validation pattern
+3. Use `run_tree_command()` for execution
+4. Add corresponding tests in `tests/test_server.py`
+
+## License
+
+MIT License
+
+## Contributing
+
+Contributions are welcome! Please ensure:
+- All tests pass
+- New tools include tests
+- Error handling is comprehensive
+- Documentation is updated

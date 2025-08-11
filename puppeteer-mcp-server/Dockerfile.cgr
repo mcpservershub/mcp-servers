@@ -1,0 +1,84 @@
+# Multi-stage Dockerfile using Chainguard images for Puppeteer MCP Server
+# Note: Due to Chromium dependencies, we use wolfi-base instead of distroless Node image
+
+# Stage 1: Build stage using Chainguard Node.js dev image
+FROM cgr.dev/chainguard/node:latest-dev AS builder
+
+# Set working directory
+USER root
+WORKDIR /app
+
+# Copy package files
+COPY --chown=node:node package*.json ./
+COPY --chown=node:node tsconfig.json ./
+
+# Switch to node user for npm operations
+USER node
+
+# Install all dependencies (including dev)
+RUN npm ci
+
+# Copy source code
+COPY --chown=node:node src ./src
+
+# Build TypeScript
+RUN npm run build
+
+# Remove dev dependencies, keep only production
+RUN npm prune --production
+
+# Stage 2: Runtime stage using Chainguard Wolfi base for Chromium support
+FROM cgr.dev/chainguard/wolfi-base:latest
+
+# Install Node.js, Chromium and required dependencies
+RUN apk update && \
+  apk add --no-cache \
+  nodejs-20 \
+  npm \
+  chromium \
+  nss \
+  freetype \
+  harfbuzz \
+  ca-certificates \
+  font-noto-emoji \
+  tini && \
+  apk cache clean
+
+# Create app user and group (UID/GID 65532 is standard for Chainguard)
+RUN addgroup appuser && adduser -D -G appuser appuser
+RUN install -d -o appuser -g appuser /home/appuser
+
+
+# Set environment variables for Puppeteer
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+  PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium \
+  PUPPETEER_HEADLESS=true \
+  NODE_ENV=production \
+  # Disable Chrome sandbox for container environment
+  CHROME_BIN=/usr/bin/chromium \
+  CHROME_PATH=/usr/bin/chromium
+
+# Set working directory
+WORKDIR /app
+
+# Copy built application from builder stage
+COPY --from=builder --chown=appuser:appuser /app/dist ./dist
+COPY --from=builder --chown=appuser:appuser /app/node_modules ./node_modules
+COPY --from=builder --chown=appuser:appuser /app/package*.json ./
+
+# Create a directory for Chrome to write temporary files
+RUN mkdir -p /tmp/.chrome && \
+  chown -R appuser:appuser /tmp/.chrome
+
+# Switch to non-root user
+USER appuser
+
+# Set HOME environment variable for Chrome profile
+ENV HOME=/tmp
+
+# Use tini as entrypoint for proper signal handling
+ENTRYPOINT ["/sbin/tini", "--"]
+
+# Start the MCP server
+CMD ["node", "dist/index.js"]
+

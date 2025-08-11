@@ -1,0 +1,10 @@
+README.md
+pyproject.toml
+src/__init__.py
+src/server.py
+taskfile_mcp.egg-info/PKG-INFO
+taskfile_mcp.egg-info/SOURCES.txt
+taskfile_mcp.egg-info/dependency_links.txt
+taskfile_mcp.egg-info/entry_points.txt
+taskfile_mcp.egg-info/requires.txt
+taskfile_mcp.egg-info/top_level.txt
