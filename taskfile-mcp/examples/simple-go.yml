@@ -1,0 +1,66 @@
+version: '3'
+
+vars:
+  BINARY: myapp
+  GO_FILES: 
+    sh: find . -name '*.go' | tr '\n' ' '
+
+tasks:
+  default:
+    desc: List available tasks
+    cmds:
+      - task --list
+
+  build:
+    desc: Build the Go application
+    cmds:
+      - go build -o {{.BINARY}} .
+    sources:
+      - '**/*.go'
+      - go.mod
+      - go.sum
+    generates:
+      - '{{.BINARY}}'
+
+  test:
+    desc: Run tests
+    cmds:
+      - go test -v ./...
+
+  test:coverage:
+    desc: Run tests with coverage
+    cmds:
+      - go test -v -cover ./...
+
+  lint:
+    desc: Run linter
+    cmds:
+      - golangci-lint run
+
+  clean:
+    desc: Clean build artifacts
+    cmds:
+      - rm -f {{.BINARY}}
+      - go clean
+
+  run:
+    desc: Run the application
+    deps: [build]
+    cmds:
+      - ./{{.BINARY}}
+
+  install:
+    desc: Install the application
+    deps: [build]
+    cmds:
+      - go install
+
+  fmt:
+    desc: Format code
+    cmds:
+      - go fmt ./...
+
+  vet:
+    desc: Run go vet
+    cmds:
+      - go vet ./...

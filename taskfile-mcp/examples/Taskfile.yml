@@ -1,0 +1,67 @@
+version: '3'
+
+vars:
+  PROJECT_NAME: taskfile-mcp
+  PYTHON: python3.12
+  VENV: .venv
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+
+  setup:
+    desc: Set up development environment
+    cmds:
+      - "{{.PYTHON}} -m venv {{.VENV}}"
+      - "{{.VENV}}/bin/pip install -e .[dev]"
+    sources:
+      - pyproject.toml
+    generates:
+      - "{{.VENV}}/bin/python"
+
+  test:
+    desc: Run tests
+    deps: [setup]
+    cmds:
+      - "{{.VENV}}/bin/pytest tests/ -v"
+
+  lint:
+    desc: Run linters
+    deps: [setup]
+    cmds:
+      - "{{.VENV}}/bin/ruff check src/"
+      - "{{.VENV}}/bin/mypy src/"
+
+  format:
+    desc: Format code
+    deps: [setup]
+    cmds:
+      - "{{.VENV}}/bin/black src/ tests/"
+
+  clean:
+    desc: Clean up artifacts
+    cmds:
+      - rm -rf {{.VENV}}
+      - rm -rf .pytest_cache
+      - rm -rf .mypy_cache
+      - rm -rf .ruff_cache
+      - find . -type d -name __pycache__ -exec rm -rf {} +
+
+  run:
+    desc: Run the MCP server
+    deps: [setup]
+    cmds:
+      - "{{.VENV}}/bin/python -m src.server"
+
+  docker-build:
+    desc: Build Docker image
+    cmds:
+      - docker build -t {{.PROJECT_NAME}}:latest .
+
+  docker-run:
+    desc: Run Docker container
+    deps: [docker-build]
+    cmds:
+      - docker run --rm -it {{.PROJECT_NAME}}:latest

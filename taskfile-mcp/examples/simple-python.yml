@@ -1,0 +1,89 @@
+version: '3'
+
+vars:
+  PYTHON: python3
+  VENV: .venv
+  PIP: '{{.VENV}}/bin/pip'
+  PYTEST: '{{.VENV}}/bin/pytest'
+
+tasks:
+  default:
+    desc: List available tasks
+    cmds:
+      - task --list
+
+  venv:
+    desc: Create virtual environment
+    cmds:
+      - '{{.PYTHON}} -m venv {{.VENV}}'
+    status:
+      - test -d {{.VENV}}
+
+  install:
+    desc: Install dependencies
+    deps: [venv]
+    cmds:
+      - '{{.PIP}} install --upgrade pip'
+      - '{{.PIP}} install -r requirements.txt'
+    sources:
+      - requirements.txt
+
+  install:dev:
+    desc: Install development dependencies
+    deps: [install]
+    cmds:
+      - '{{.PIP}} install -r requirements-dev.txt'
+    sources:
+      - requirements-dev.txt
+
+  test:
+    desc: Run tests
+    deps: [install:dev]
+    cmds:
+      - '{{.PYTEST}} tests/ -v'
+
+  test:coverage:
+    desc: Run tests with coverage
+    deps: [install:dev]
+    cmds:
+      - '{{.PYTEST}} tests/ --cov=src --cov-report=html --cov-report=term'
+
+  lint:
+    desc: Run linters
+    deps: [install:dev]
+    cmds:
+      - '{{.VENV}}/bin/ruff check src/ tests/'
+      - '{{.VENV}}/bin/mypy src/'
+
+  format:
+    desc: Format code
+    deps: [install:dev]
+    cmds:
+      - '{{.VENV}}/bin/black src/ tests/'
+      - '{{.VENV}}/bin/isort src/ tests/'
+
+  clean:
+    desc: Clean up generated files
+    cmds:
+      - rm -rf {{.VENV}}
+      - rm -rf __pycache__ .pytest_cache .mypy_cache .ruff_cache
+      - find . -type d -name __pycache__ -exec rm -rf {} +
+      - find . -type f -name "*.pyc" -delete
+
+  run:
+    desc: Run the application
+    deps: [install]
+    cmds:
+      - '{{.VENV}}/bin/python -m src.main'
+
+  freeze:
+    desc: Freeze requirements
+    deps: [venv]
+    cmds:
+      - '{{.PIP}} freeze > requirements.txt'
+
+  docs:
+    desc: Build documentation
+    deps: [install:dev]
+    cmds:
+      - '{{.VENV}}/bin/sphinx-build -b html docs/ docs/_build'

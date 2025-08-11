@@ -1,0 +1,81 @@
+version: '3'
+
+vars:
+  IMAGE_NAME: myapp
+  IMAGE_TAG: latest
+  CONTAINER_NAME: myapp-container
+  PORT: 8080
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+
+  build:
+    desc: Build Docker image
+    cmds:
+      - docker build -t {{.IMAGE_NAME}}:{{.IMAGE_TAG}} .
+    sources:
+      - Dockerfile
+      - src/**/*
+
+  run:
+    desc: Run Docker container
+    deps: [build]
+    cmds:
+      - docker run -d --name {{.CONTAINER_NAME}} -p {{.PORT}}:{{.PORT}} {{.IMAGE_NAME}}:{{.IMAGE_TAG}}
+
+  run:dev:
+    desc: Run container in development mode
+    deps: [build]
+    cmds:
+      - |
+        docker run -it --rm \
+          --name {{.CONTAINER_NAME}}-dev \
+          -p {{.PORT}}:{{.PORT}} \
+          -v $(pwd):/app \
+          {{.IMAGE_NAME}}:{{.IMAGE_TAG}}
+
+  stop:
+    desc: Stop running container
+    cmds:
+      - docker stop {{.CONTAINER_NAME}}
+      - docker rm {{.CONTAINER_NAME}}
+
+  logs:
+    desc: View container logs
+    cmds:
+      - docker logs -f {{.CONTAINER_NAME}}
+
+  shell:
+    desc: Open shell in container
+    cmds:
+      - docker exec -it {{.CONTAINER_NAME}} /bin/bash
+
+  push:
+    desc: Push image to registry
+    deps: [build]
+    cmds:
+      - docker push {{.IMAGE_NAME}}:{{.IMAGE_TAG}}
+
+  clean:
+    desc: Clean up containers and images
+    cmds:
+      - docker rm -f {{.CONTAINER_NAME}} || true
+      - docker rmi {{.IMAGE_NAME}}:{{.IMAGE_TAG}} || true
+
+  compose:up:
+    desc: Start services with docker-compose
+    cmds:
+      - docker-compose up -d
+
+  compose:down:
+    desc: Stop services with docker-compose
+    cmds:
+      - docker-compose down
+
+  compose:logs:
+    desc: View docker-compose logs
+    cmds:
+      - docker-compose logs -f

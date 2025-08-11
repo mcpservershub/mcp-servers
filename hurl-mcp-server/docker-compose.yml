@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  hurl-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hurl-mcp-server
+    stdin_open: true
+    tty: true
+    volumes:
+      - ./examples:/app/examples:ro
+    environment:
+      - PYTHONUNBUFFERED=1

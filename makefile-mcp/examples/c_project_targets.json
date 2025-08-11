@@ -1,0 +1,123 @@
+{
+  "success": true,
+  "targets": [
+    {
+      "name": "check",
+      "dependencies": [],
+      "phony": true
+    },
+    {
+      "name": "docs",
+      "dependencies": [],
+      "phony": false
+    },
+    {
+      "name": "bin/myapp",
+      "dependencies": [],
+      "phony": false
+    },
+    {
+      "name": "debug",
+      "dependencies": [
+        "CFLAGS",
+        "+=",
+        "-DDEBUG",
+        "-O0"
+      ],
+      "phony": true
+    },
+    {
+      "name": "lib",
+      "dependencies": [
+        "dirs",
+        "lib/libmyapp.a"
+      ],
+      "phony": true
+    },
+    {
+      "name": "dirs",
+      "dependencies": [],
+      "phony": true
+    },
+    {
+      "name": "uninstall",
+      "dependencies": [],
+      "phony": true
+    },
+    {
+      "name": "clean",
+      "dependencies": [],
+      "phony": true
+    },
+    {
+      "name": "c_project.mk",
+      "dependencies": [],
+      "phony": false
+    },
+    {
+      "name": "all",
+      "dependencies": [
+        "dirs",
+        "bin/myapp"
+      ],
+      "phony": true
+    },
+    {
+      "name": "help",
+      "dependencies": [],
+      "phony": true
+    },
+    {
+      "name": "test",
+      "dependencies": [],
+      "phony": true
+    },
+    {
+      "name": "install",
+      "dependencies": [
+        "bin/myapp"
+      ],
+      "phony": true
+    },
+    {
+      "name": "format",
+      "dependencies": [],
+      "phony": true
+    },
+    {
+      "name": "lib/libmyapp.a",
+      "dependencies": [],
+      "phony": false
+    },
+    {
+      "name": "release",
+      "dependencies": [
+        "CFLAGS",
+        "+=",
+        "-DNDEBUG",
+        "-O3"
+      ],
+      "phony": true
+    },
+    {
+      "name": ".PHONY",
+      "dependencies": [
+        "all",
+        "clean",
+        "test",
+        "install",
+        "uninstall",
+        "lib",
+        "debug",
+        "release",
+        "help",
+        "dirs",
+        "check",
+        "format"
+      ],
+      "phony": false
+    }
+  ],
+  "default_target": "check",
+  "total_count": 17
+}

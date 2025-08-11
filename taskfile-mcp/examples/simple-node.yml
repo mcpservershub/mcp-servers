@@ -1,0 +1,84 @@
+version: '3'
+
+vars:
+  NPM: npm
+  NODE: node
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+
+  install:
+    desc: Install dependencies
+    cmds:
+      - '{{.NPM}} install'
+    sources:
+      - package.json
+      - package-lock.json
+    generates:
+      - node_modules/**/*
+
+  dev:
+    desc: Start development server
+    deps: [install]
+    cmds:
+      - '{{.NPM}} run dev'
+
+  build:
+    desc: Build for production
+    deps: [install]
+    cmds:
+      - '{{.NPM}} run build'
+    sources:
+      - src/**/*
+      - package.json
+    generates:
+      - dist/**/*
+
+  test:
+    desc: Run tests
+    deps: [install]
+    cmds:
+      - '{{.NPM}} test'
+
+  test:watch:
+    desc: Run tests in watch mode
+    deps: [install]
+    cmds:
+      - '{{.NPM}} run test:watch'
+
+  lint:
+    desc: Run ESLint
+    deps: [install]
+    cmds:
+      - '{{.NPM}} run lint'
+
+  lint:fix:
+    desc: Fix linting issues
+    deps: [install]
+    cmds:
+      - '{{.NPM}} run lint:fix'
+
+  clean:
+    desc: Clean all generated files
+    cmds:
+      - rm -rf node_modules dist coverage
+      - rm -f package-lock.json
+
+  start:
+    desc: Start production server
+    deps: [build]
+    cmds:
+      - '{{.NODE}} dist/index.js'
+
+  audit:
+    desc: Run security audit
+    cmds:
+      - '{{.NPM}} audit'
+
+  update:
+    desc: Update dependencies
+    cmds:
+      - '{{.NPM}} update'

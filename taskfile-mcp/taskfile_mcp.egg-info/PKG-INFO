@@ -1,0 +1,408 @@
+Metadata-Version: 2.4
+Name: taskfile-mcp
+Version: 0.1.0
+Summary: MCP Server for Taskfile development with Task CLI backend
+Author-email: Taskfile MCP Contributors <contact@example.com>
+License: MIT
+Keywords: mcp,taskfile,task,automation,build-tool
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Software Development :: Build Tools
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+Requires-Dist: mcp[cli]>=1.0.0
+Provides-Extra: dev
+Requires-Dist: pytest>=8.3.4; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.24.0; extra == "dev"
+
+# Taskfile MCP Server
+
+An MCP (Model Context Protocol) server for Taskfile development, providing intelligent tools for creating, analyzing, and managing Taskfiles through AI assistants.
+
+## Features
+
+The Taskfile MCP Server provides high-impact tools for working with Taskfiles:
+
+### Core Tools
+
+1. **`list_tasks`** - List all available tasks in a Taskfile
+2. **`run_task`** - Execute tasks with support for dry-run, watch mode, and variables
+3. **`parse_taskfile`** - Parse and analyze Taskfile structure
+4. **`validate_taskfile`** - Validate Taskfile syntax and check for issues
+5. **`format_taskfile`** - Auto-format Taskfiles according to style guidelines
+6. **`analyze_dependencies`** - Analyze task dependencies and find circular references
+7. **`generate_taskfile`** - Generate new Taskfiles for different project types
+8. **`add_task`** - Add new tasks to existing Taskfiles
+9. **`visualize_dependencies`** - Create dependency graphs in DOT or JSON format
+10. **`debug_task`** - Debug tasks with dry-run and detailed output
+
+## Prerequisites
+
+- Python 3.12 or higher
+- Task CLI installed ([Installation Guide](https://taskfile.dev/installation))
+- `uv` package manager (optional but recommended)
+
+## Installation
+
+### Using uv (Recommended)
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/taskfile-mcp.git
+cd taskfile-mcp
+
+# Install uv if not already installed
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Create virtual environment and install dependencies
+uv venv
+uv pip install -e .
+
+# For development
+uv pip install -e .[dev]
+```
+
+### Using pip
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/taskfile-mcp.git
+cd taskfile-mcp
+
+# Create virtual environment
+python3.12 -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install dependencies
+pip install -e .
+
+# For development
+pip install -e .[dev]
+```
+
+### Using Docker
+
+```bash
+# Build the Docker image
+docker build -t taskfile-mcp:latest .
+
+# Run the container
+docker run --rm -it -v $(pwd):/workspace taskfile-mcp:latest
+```
+
+## Usage
+
+### Running the Server
+
+#### Standalone Mode
+
+```bash
+# Activate virtual environment
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Run the server
+python -m src.server
+```
+
+#### With Task
+
+If you have Task installed:
+
+```bash
+task run
+```
+
+### MCP Configuration
+
+#### For Claude Desktop
+
+Add the following to your Claude Desktop configuration file:
+
+**Linux/Mac:** `~/.config/claude/claude_desktop_config.json`
+**Windows:** `%APPDATA%\claude\claude_desktop_config.json`
+
+##### Standalone Configuration
+
+```json
+{
+  "mcpServers": {
+    "taskfile": {
+      "command": "/path/to/taskfile-mcp/.venv/bin/python",
+      "args": ["-m", "src.server"],
+      "cwd": "/path/to/your/project"
+    }
+  }
+}
+```
+
+##### Docker Configuration
+
+```json
+{
+  "mcpServers": {
+    "taskfile": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "-v",
+        "/path/to/your/project:/workspace",
+        "taskfile-mcp:latest"
+      ]
+    }
+  }
+}
+```
+
+#### For Other MCP Clients
+
+The server runs in stdio transport mode and can be integrated with any MCP-compatible client. Example initialization:
+
+```python
+import subprocess
+from mcp.client import Client
+
+# Start the server process
+process = subprocess.Popen(
+    ["python", "-m", "src.server"],
+    stdin=subprocess.PIPE,
+    stdout=subprocess.PIPE,
+    stderr=subprocess.PIPE
+)
+
+# Create MCP client
+client = Client()
+await client.connect(process.stdin, process.stdout)
+```
+
+## Testing
+
+### Testing with MCP Inspector
+
+[MCP Inspector](https://github.com/modelcontextprotocol/inspector) is a tool for testing and debugging MCP servers.
+
+1. Install MCP Inspector:
+```bash
+npm install -g @modelcontextprotocol/inspector
+```
+
+2. Run the inspector:
+```bash
+mcp-inspector
+```
+
+3. Start the Taskfile MCP server:
+```bash
+# In the inspector, use this command:
+python -m src.server
+```
+
+4. Test the tools in the inspector interface:
+   - List available tools
+   - Execute tools with sample inputs
+   - View responses and debug output
+
+### Running Unit Tests
+
+```bash
+# Using Task
+task test
+
+# Or directly with pytest
+.venv/bin/pytest tests/ -v
+
+# With coverage
+.venv/bin/pytest tests/ --cov=src --cov-report=html
+```
+
+### Example Test Commands
+
+Test individual tools using the MCP Inspector or a Python script:
+
+```python
+# Example: List tasks
+await client.call_tool("list_tasks", {
+    "working_dir": "/path/to/project",
+    "json_output": True
+})
+
+# Example: Run a task
+await client.call_tool("run_task", {
+    "task_name": "build",
+    "dry_run": True,
+    "verbose": True
+})
+
+# Example: Generate a new Taskfile
+await client.call_tool("generate_taskfile", {
+    "output_path": "./Taskfile.yml",
+    "project_type": "python",
+    "tasks": ["test", "lint", "deploy"]
+})
+```
+
+## Tool Reference
+
+### list_tasks
+List all available tasks in the current Taskfile.
+
+**Parameters:**
+- `working_dir` (optional): Working directory
+- `json_output`: Return structured JSON (default: true)
+
+### run_task
+Execute a specific task with options.
+
+**Parameters:**
+- `task_name`: Name of the task to run
+- `working_dir` (optional): Working directory
+- `dry_run`: Perform dry run
+- `watch`: Run in watch mode
+- `parallel`: Run dependencies in parallel
+- `force`: Force execution
+- `silent`: Suppress output
+- `verbose`: Show verbose output
+- `variables`: Task variables (dict)
+- `env`: Environment variables (dict)
+
+### parse_taskfile
+Parse and analyze Taskfile structure.
+
+**Parameters:**
+- `filepath`: Path to the Taskfile
+
+### validate_taskfile
+Validate Taskfile syntax and structure.
+
+**Parameters:**
+- `filepath`: Path to the Taskfile
+
+### format_taskfile
+Format a Taskfile according to style guidelines.
+
+**Parameters:**
+- `filepath`: Path to the Taskfile
+- `save`: Save formatted content to file
+
+### analyze_dependencies
+Analyze task dependencies.
+
+**Parameters:**
+- `filepath`: Path to the Taskfile
+- `task_name` (optional): Specific task to analyze
+
+### generate_taskfile
+Generate a new Taskfile.
+
+**Parameters:**
+- `output_path`: Where to create the Taskfile
+- `project_type`: Type of project (generic, go, node, python)
+- `tasks` (optional): Additional tasks to include
+
+### add_task
+Add a new task to a Taskfile.
+
+**Parameters:**
+- `filepath`: Path to the Taskfile
+- `task_name`: Name of the new task
+- `description` (optional): Task description
+- `commands`: List of commands
+- `dependencies` (optional): Task dependencies
+- `sources` (optional): Source files
+- `generates` (optional): Generated files
+
+### visualize_dependencies
+Create a dependency graph.
+
+**Parameters:**
+- `filepath`: Path to the Taskfile
+- `output_format`: Format (dot or json)
+
+### debug_task
+Debug a task execution.
+
+**Parameters:**
+- `task_name`: Name of the task
+- `working_dir` (optional): Working directory
+- `show_commands`: Show commands
+- `show_variables`: Show variable expansions
+
+## Development
+
+### Project Structure
+
+```
+taskfile-mcp/
+├── src/
+│   ├── __init__.py
+│   ├── server.py          # Main MCP server
+│   ├── task_cli.py        # Task CLI wrapper
+│   └── yaml_utils.py      # YAML utilities
+├── tests/
+│   └── test_server.py     # Test suite
+├── examples/
+│   └── Taskfile.yml       # Example Taskfile
+├── pyproject.toml         # Project configuration
+├── Dockerfile             # Docker configuration
+└── README.md             # Documentation
+```
+
+### Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests for new functionality
+5. Run tests and linting
+6. Submit a pull request
+
+### Code Style
+
+```bash
+# Format code
+task format
+
+# Run linters
+task lint
+```
+
+## Troubleshooting
+
+### Task CLI Not Found
+
+If you get an error about Task CLI not being found:
+
+1. Install Task from https://taskfile.dev/installation
+2. Ensure `task` is in your PATH
+3. Verify installation: `task --version`
+
+### Permission Errors
+
+If running in Docker, ensure the mounted directory has appropriate permissions:
+
+```bash
+docker run --rm -it -v $(pwd):/workspace --user $(id -u):$(id -g) taskfile-mcp:latest
+```
+
+### Connection Issues
+
+If the MCP client cannot connect:
+
+1. Check that the server starts without errors
+2. Verify Python version is 3.12+
+3. Ensure all dependencies are installed
+4. Check logs for detailed error messages
+
+## License
+
+MIT License - See LICENSE file for details
+
+## Acknowledgments
+
+- [Task](https://taskfile.dev) - Modern task runner
+- [MCP](https://modelcontextprotocol.io) - Model Context Protocol
+- [FastMCP](https://github.com/jlowin/fastmcp) - FastMCP framework

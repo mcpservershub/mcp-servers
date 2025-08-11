@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=69.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "makefile-mcp"
+version = "0.1.0"
+description = "MCP Server for working with Makefiles using make CLI"
+authors = [{name = "MCP Developer"}]
+readme = "README.md"
+requires-python = ">=3.12"
+license = {text = "MIT"}
+
+dependencies = [
+    "mcp[cli]>=1.0.0",
+]
+
+[project.scripts]
+makefile-mcp = "makefile_mcp.server:main"
+
+[tool.setuptools]
+py-modules = ["makefile_mcp"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true

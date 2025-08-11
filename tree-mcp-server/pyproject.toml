@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=75.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tree-mcp-server"
+version = "0.1.0"
+description = "MCP server for tree command with robust features"
+readme = "README.md"
+requires-python = ">=3.12"
+license = {text = "MIT"}
+authors = [
+    {name = "Tree MCP Server", email = "contact@example.com"}
+]
+dependencies = [
+    "mcp[cli]>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+]
+
+[project.scripts]
+tree-mcp = "tree_mcp.server:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+packages = ["tree_mcp"]
+
+[tool.setuptools.package-data]
+tree_mcp = ["py.typed"]

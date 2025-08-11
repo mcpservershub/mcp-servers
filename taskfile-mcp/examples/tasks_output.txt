@@ -1,0 +1,13 @@
+task: Available tasks for this project:
+* clean:               Clean up generated files
+* default:             List available tasks
+* docs:                Build documentation
+* format:              Format code
+* freeze:              Freeze requirements
+* install:             Install dependencies
+* lint:                Run linters
+* run:                 Run the application
+* test:                Run tests
+* venv:                Create virtual environment
+* install:dev:         Install development dependencies
+* test:coverage:       Run tests with coverage

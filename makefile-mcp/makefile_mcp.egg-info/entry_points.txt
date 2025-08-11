@@ -1,0 +1,2 @@
+[console_scripts]
+makefile-mcp = makefile_mcp.server:main

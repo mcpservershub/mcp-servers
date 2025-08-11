@@ -1,0 +1,9 @@
+README.md
+makefile_mcp.py
+pyproject.toml
+makefile_mcp.egg-info/PKG-INFO
+makefile_mcp.egg-info/SOURCES.txt
+makefile_mcp.egg-info/dependency_links.txt
+makefile_mcp.egg-info/entry_points.txt
+makefile_mcp.egg-info/requires.txt
+makefile_mcp.egg-info/top_level.txt
