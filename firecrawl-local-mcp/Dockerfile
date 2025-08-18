@@ -15,7 +15,7 @@ RUN chown -R node:node /app
 USER node
 
 # Copy package.json and package-lock.json to install dependencies
-COPY --chown=node:node package.json package-lock.json ./
+COPY --chown=node:node package.json ./
 
 # Install dependencies (ignoring scripts to prevent running the prepare script)
 RUN npm install --ignore-scripts
@@ -44,7 +44,6 @@ RUN chown -R nodejs:nodejs /app
 # Copy the built application from the builder stage with proper ownership
 COPY --from=builder --chown=nodejs:nodejs /app/dist /app/dist
 COPY --from=builder --chown=nodejs:nodejs /app/package.json /app/package.json
-COPY --from=builder --chown=nodejs:nodejs /app/package-lock.json /app/package-lock.json
 
 # Switch to the nodejs user
 USER nodejs

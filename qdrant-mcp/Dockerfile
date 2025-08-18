@@ -1,4 +1,6 @@
-FROM python:3.11-slim
+FROM cgr.dev/chainguard/wolfi-base
+
+RUN apk update && apk add python-3.12 py3.12-pip uv
 
 WORKDIR /app
 
@@ -6,7 +8,7 @@ WORKDIR /app
 RUN pip install --no-cache-dir uv
 
 # Install the mcp-server-qdrant package
-RUN uv pip install --system --no-cache-dir mcp-server-qdrant
+RUN uv pip install --system --no-cache-dir qdrant-mcp
 
 # Expose the default port for SSE transport
 EXPOSE 8000
