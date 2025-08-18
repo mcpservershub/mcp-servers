@@ -1,0 +1,17 @@
+# Core dependencies for Qdrant MCP Server testing
+qdrant-client>=1.7.0
+sentence-transformers>=2.2.0
+requests>=2.31.0
+
+# MCP Server dependencies
+mcp-server-qdrant
+uvx
+
+# Optional dependencies for enhanced functionality
+fastembed>=0.1.0  # Alternative lightweight embeddings
+numpy>=1.24.0
+torch>=2.0.0  # Required by sentence-transformers
+
+# Development and testing
+pytest>=7.0.0
+pytest-asyncio>=0.21.0

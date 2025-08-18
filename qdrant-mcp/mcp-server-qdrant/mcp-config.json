@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "qdrant-local": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--with",
+        "mcp-server-qdrant",
+        "mcp-server-qdrant"
+      ],
+      "env": {
+        "QDRANT_URL": "http://localhost:6333",
+        "COLLECTION_NAME": "test-collection",
+        "EMBEDDING_MODEL": "sentence-transformers/all-MiniLM-L6-v2",
+        "VECTOR_SIZE": "384",
+        "DISTANCE": "Cosine",
+        "API_KEY": "",
+        "FASTMCP_PORT": "8000"
+      }
+    }
+  }
+}
