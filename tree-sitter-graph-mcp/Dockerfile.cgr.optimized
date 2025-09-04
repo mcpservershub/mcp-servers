@@ -1,0 +1,91 @@
+# Optimized Multi-stage Dockerfile for Tree-sitter MCP Server
+# Stage 1: Rust builder - Build tree-sitter-graph binary
+FROM cgr.dev/chainguard/wolfi-base AS rust-builder
+
+# Install Rust toolchain and build dependencies
+RUN apk update && apk add rust gcc 
+
+# Build tree-sitter-graph with optimizations
+RUN cargo install --features cli \
+  --root /tmp/cargo-install \
+  --profile release \
+  tree-sitter-graph && \
+  # Strip debug symbols to reduce binary size
+  strip /tmp/cargo-install/bin/tree-sitter-graph && \
+  # Clean up cargo cache to save space
+  rm -rf /root/.cargo/registry /root/.cargo/git
+
+# Stage 2: Python builder - Build Python package
+FROM cgr.dev/chainguard/wolfi-base AS python-builder
+
+WORKDIR /build
+
+# Install only essential Python build dependencies
+RUN apk update && apk add python-3.12 py3.12-pip
+
+# Copy package files
+COPY pyproject.toml README.md LICENSE ./
+COPY src/ ./src/
+
+# Create virtual environment and install with optimizations
+RUN python -m venv /opt/venv --system-site-packages
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Install with minimal dependencies and no cache
+RUN pip install --no-cache-dir --upgrade pip wheel && \
+  pip install --no-cache-dir --no-compile -e . && \
+  # Remove pip after installation (keep wheel for runtime)
+  pip uninstall -y pip && \
+  # Clean up unnecessary files but keep the package
+  find /opt/venv -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true && \
+  find /opt/venv -type f -name "*.pyc" -delete && \
+  find /opt/venv -type f -name "*.pyo" -delete && \
+  find /opt/venv -type d -name "tests" -exec rm -rf {} + 2>/dev/null || true && \
+  find /opt/venv -type d -name "test" -exec rm -rf {} + 2>/dev/null || true && \
+  rm -rf /opt/venv/share/man /opt/venv/share/doc
+
+# Stage 3: Final runtime image
+FROM cgr.dev/chainguard/wolfi-base AS final
+
+# Install only essential runtime dependencies
+# python-3.12 is needed, libgcc for tree-sitter-graph, gcc for compiling parsers
+RUN apk update && apk add --no-cache python-3.12 libgcc gcc && \
+  rm -rf /var/cache/apk/*
+
+# Create non-root user early
+RUN addgroup mcp && adduser -D -G mcp mcp
+
+# Set working directory
+WORKDIR /app
+
+# Copy languages with all parser files (required for tree-sitter to work)
+COPY --chown=mcp:mcp languages/ ./languages/
+
+# Create necessary directories for mcp user
+RUN mkdir -p /home/mcp/.cargo/bin /home/mcp/.config/tree-sitter && \
+  chown -R mcp:mcp /home/mcp
+
+# Copy tree-sitter-graph binary from rust-builder
+COPY --from=rust-builder --chown=mcp:mcp /tmp/cargo-install/bin/tree-sitter-graph /home/mcp/.cargo/bin/
+
+# Copy config file
+COPY --chown=mcp:mcp config.json /home/mcp/.config/tree-sitter/config.json
+
+# Copy optimized virtual environment from python-builder
+COPY --from=python-builder --chown=mcp:mcp /opt/venv /opt/venv
+
+# Copy only essential source files (not the entire build directory)
+COPY --chown=mcp:mcp src/ ./src/
+COPY --chown=mcp:mcp pyproject.toml ./
+
+# Set minimal environment variables
+ENV PATH="/opt/venv/bin:/home/mcp/.cargo/bin:$PATH" \
+  PYTHONUNBUFFERED=1 \
+  PYTHONDONTWRITEBYTECODE=1 \
+  PYTHONPATH="/app/src:$PYTHONPATH"
+
+# Switch to non-root user
+USER mcp
+
+# Use exec form for better signal handling
+ENTRYPOINT ["python", "-m", "tree_sitter_graph_mcp.server"]

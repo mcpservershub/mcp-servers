@@ -1,0 +1,47 @@
+; Working TSG for Python with tree-sitter-graph v0.12.0
+; Compatible with tree-sitter-python v0.20.4
+
+; Python function definitions
+(function_definition
+  name: (identifier) @func_name)
+{
+  node func_node
+  attr (func_node) type = "python_function"
+  attr (func_node) name = (source-text @func_name)
+}
+
+; Python class definitions
+(class_definition
+  name: (identifier) @class_name)
+{
+  node class_node
+  attr (class_node) type = "python_class"
+  attr (class_node) name = (source-text @class_name)
+}
+
+; Python decorators
+(decorator
+  (identifier) @decorator_name)
+{
+  node decorator_node
+  attr (decorator_node) type = "decorator"
+  attr (decorator_node) name = (source-text @decorator_name)
+}
+
+; Python imports
+(import_statement
+  name: (dotted_name) @module)
+{
+  node import_node
+  attr (import_node) type = "import"
+  attr (import_node) module = (source-text @module)
+}
+
+; Python variable assignments
+(assignment
+  left: (identifier) @var_name)
+{
+  node var_node
+  attr (var_node) type = "variable"
+  attr (var_node) name = (source-text @var_name)
+}

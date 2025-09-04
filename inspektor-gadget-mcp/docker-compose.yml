@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  inspektor-mcp:
+    build: .
+    image: inspektor-gadget-mcp:latest
+    container_name: inspektor-gadget-mcp
+    
+    # REQUIRED: Privileged mode for eBPF operations
+    privileged: true
+    
+    # Required capabilities if not using privileged mode
+    # cap_add:
+    #   - SYS_ADMIN
+    #   - SYS_PTRACE
+    #   - NET_ADMIN
+    #   - SYS_RESOURCE
+    #   - CAP_SYS_ADMIN
+    #   - CAP_BPF
+    #   - CAP_PERFMON
+    
+    # Mount required kernel interfaces
+    volumes:
+      # Required for eBPF
+      - /sys/kernel/debug:/sys/kernel/debug:ro
+      - /sys/fs/bpf:/sys/fs/bpf:rw
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+      
+      # Required for process inspection
+      - /proc:/host/proc:ro
+      
+      # Required for container runtime access
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      
+      # For containerd runtime (if used)
+      # - /run/containerd:/run/containerd:ro
+      
+      # For CRI-O runtime (if used)
+      # - /var/run/crio:/var/run/crio:ro
+    
+    # Network mode host for full network visibility
+    network_mode: host
+    
+    # PID namespace sharing for process visibility
+    pid: host
+    
+    environment:
+      - IG_BINARY_PATH=/usr/local/bin/ig
+      - IG_DEFAULT_RUNTIME=docker
+      - IG_DEFAULT_TIMEOUT=30
+      - MCP_SERVER_NAME=inspektor-gadget
+      - LOG_LEVEL=INFO
+    
+    # Automatic restart
+    restart: unless-stopped
+    
+    # Resource limits (optional)
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M

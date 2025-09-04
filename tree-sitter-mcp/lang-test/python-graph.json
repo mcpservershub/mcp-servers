@@ -1,0 +1,65 @@
+{
+  "type": "module",
+  "is_named": true,
+  "text": "/test/exampl.py",
+  "children": [
+    {
+      "type": "ERROR",
+      "is_named": true,
+      "text": "/",
+      "children": [
+        {
+          "type": "/",
+          "is_named": false,
+          "text": "/"
+        }
+      ]
+    },
+    {
+      "type": "expression_statement",
+      "is_named": true,
+      "text": "test/exampl.py",
+      "children": [
+        {
+          "type": "binary_operator",
+          "is_named": true,
+          "text": "test/exampl.py",
+          "children": [
+            {
+              "type": "identifier",
+              "is_named": true,
+              "text": "test"
+            },
+            {
+              "type": "/",
+              "is_named": false,
+              "text": "/"
+            },
+            {
+              "type": "attribute",
+              "is_named": true,
+              "text": "exampl.py",
+              "children": [
+                {
+                  "type": "identifier",
+                  "is_named": true,
+                  "text": "exampl"
+                },
+                {
+                  "type": ".",
+                  "is_named": false,
+                  "text": "."
+                },
+                {
+                  "type": "identifier",
+                  "is_named": true,
+                  "text": "py"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

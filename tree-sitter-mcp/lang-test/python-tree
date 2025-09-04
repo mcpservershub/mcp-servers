@@ -1,0 +1,175 @@
+{
+  "type": "module",
+  "is_named": true,
+  "start_byte": 0,
+  "end_byte": 16,
+  "start_point": {
+    "row": 0,
+    "column": 0
+  },
+  "end_point": {
+    "row": 0,
+    "column": 16
+  },
+  "text": "/test/example.py",
+  "children": [
+    {
+      "type": "ERROR",
+      "is_named": true,
+      "start_byte": 0,
+      "end_byte": 1,
+      "start_point": {
+        "row": 0,
+        "column": 0
+      },
+      "end_point": {
+        "row": 0,
+        "column": 1
+      },
+      "text": "/",
+      "children": [
+        {
+          "type": "/",
+          "is_named": false,
+          "start_byte": 0,
+          "end_byte": 1,
+          "start_point": {
+            "row": 0,
+            "column": 0
+          },
+          "end_point": {
+            "row": 0,
+            "column": 1
+          },
+          "text": "/"
+        }
+      ]
+    },
+    {
+      "type": "expression_statement",
+      "is_named": true,
+      "start_byte": 1,
+      "end_byte": 16,
+      "start_point": {
+        "row": 0,
+        "column": 1
+      },
+      "end_point": {
+        "row": 0,
+        "column": 16
+      },
+      "text": "test/example.py",
+      "children": [
+        {
+          "type": "binary_operator",
+          "is_named": true,
+          "start_byte": 1,
+          "end_byte": 16,
+          "start_point": {
+            "row": 0,
+            "column": 1
+          },
+          "end_point": {
+            "row": 0,
+            "column": 16
+          },
+          "text": "test/example.py",
+          "children": [
+            {
+              "type": "identifier",
+              "is_named": true,
+              "start_byte": 1,
+              "end_byte": 5,
+              "start_point": {
+                "row": 0,
+                "column": 1
+              },
+              "end_point": {
+                "row": 0,
+                "column": 5
+              },
+              "text": "test"
+            },
+            {
+              "type": "/",
+              "is_named": false,
+              "start_byte": 5,
+              "end_byte": 6,
+              "start_point": {
+                "row": 0,
+                "column": 5
+              },
+              "end_point": {
+                "row": 0,
+                "column": 6
+              },
+              "text": "/"
+            },
+            {
+              "type": "attribute",
+              "is_named": true,
+              "start_byte": 6,
+              "end_byte": 16,
+              "start_point": {
+                "row": 0,
+                "column": 6
+              },
+              "end_point": {
+                "row": 0,
+                "column": 16
+              },
+              "text": "example.py",
+              "children": [
+                {
+                  "type": "identifier",
+                  "is_named": true,
+                  "start_byte": 6,
+                  "end_byte": 13,
+                  "start_point": {
+                    "row": 0,
+                    "column": 6
+                  },
+                  "end_point": {
+                    "row": 0,
+                    "column": 13
+                  },
+                  "text": "example"
+                },
+                {
+                  "type": ".",
+                  "is_named": false,
+                  "start_byte": 13,
+                  "end_byte": 14,
+                  "start_point": {
+                    "row": 0,
+                    "column": 13
+                  },
+                  "end_point": {
+                    "row": 0,
+                    "column": 14
+                  },
+                  "text": "."
+                },
+                {
+                  "type": "identifier",
+                  "is_named": true,
+                  "start_byte": 14,
+                  "end_byte": 16,
+                  "start_point": {
+                    "row": 0,
+                    "column": 14
+                  },
+                  "end_point": {
+                    "row": 0,
+                    "column": 16
+                  },
+                  "text": "py"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

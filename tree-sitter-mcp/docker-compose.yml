@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  treesitter-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      cache_from:
+        - python:3.12-slim
+    image: treesitter-mcp-enhanced:latest
+    container_name: treesitter-mcp-server
+    
+    # MCP servers communicate via stdio, so we need interactive mode
+    stdin_open: true
+    tty: false
+    
+    # Environment variables
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "python", "-c", "from treesitter_mcp_new.server import list_languages; import asyncio; asyncio.run(list_languages())"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    
+    # Labels for metadata
+    labels:
+      - "com.intelops.app=treesitter-mcp"
+      - "com.intelops.version=0.2.0"
+      - "com.intelops.description=Enhanced Tree-sitter MCP Server"
+
+  # Optional: Development service with mounted source code
+  treesitter-mcp-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder  # Use builder stage for development
+    image: treesitter-mcp-enhanced:dev
+    container_name: treesitter-mcp-dev
+    
+    stdin_open: true
+    tty: true
+    
+    # Mount source code for development
+    volumes:
+      - ./src:/app/src:ro
+      - ./README.md:/app/README.md:ro
+      
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHON_ENV=development
+      
+    # Override entrypoint for development
+    entrypoint: ["/bin/bash"]
+    
+    profiles:
+      - dev  # Only start with --profile dev flag
+
+# Optional: Define networks if needed for integration
+networks:
+  default:
+    name: mcp-network
+    driver: bridge
