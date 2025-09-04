@@ -1,0 +1,2 @@
+[console_scripts]
+treesitter-mcp-new = treesitter_mcp_new.server:main

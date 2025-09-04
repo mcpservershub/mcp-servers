@@ -1,0 +1,51 @@
+{
+  "type": "source_file",
+  "is_named": true,
+  "text": "/test/example.go",
+  "children": [
+    {
+      "type": "ERROR",
+      "is_named": true,
+      "text": "/test/example.go",
+      "children": [
+        {
+          "type": "/",
+          "is_named": false,
+          "text": "/"
+        },
+        {
+          "type": "identifier",
+          "is_named": true,
+          "text": "test"
+        },
+        {
+          "type": "/",
+          "is_named": false,
+          "text": "/"
+        },
+        {
+          "type": "qualified_type",
+          "is_named": true,
+          "text": "example.go",
+          "children": [
+            {
+              "type": "package_identifier",
+              "is_named": true,
+              "text": "example"
+            },
+            {
+              "type": ".",
+              "is_named": false,
+              "text": "."
+            },
+            {
+              "type": "type_identifier",
+              "is_named": true,
+              "text": "go"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

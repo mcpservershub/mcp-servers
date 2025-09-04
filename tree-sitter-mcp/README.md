@@ -1,0 +1,394 @@
+# Enhanced Tree-sitter MCP Server
+
+A powerful MCP (Model Context Protocol) server that combines the best features from multiple Tree-sitter implementations, providing comprehensive code analysis and visualization capabilities.
+
+## Features
+
+This implementation combines:
+- **Graph Visualization** from the local implementation (DOT, PNG, SVG output)
+- **Advanced AST Operations** from the GitHub implementation
+- **Comprehensive Search & Query** capabilities
+- **Code Analysis Tools** for complexity, dependencies, and symbol extraction
+
+### Available Tools
+
+#### 1. AST Operations
+- `generate_ast` - Generate Abstract Syntax Trees with configurable depth and detail
+- `get_node_at_position` - Find AST nodes at specific code positions
+
+#### 2. Graph Visualization (Unique Feature)
+- `generate_graph` - Create visual representations of code structure
+  - Supports DOT (Graphviz), JSON, PNG, and SVG formats
+  - Configurable node limits for large files
+
+#### 3. Search and Query
+- `query_code` - Execute Tree-sitter queries using S-expression syntax
+- `get_query_template` - Access predefined query templates for common patterns
+- `list_query_templates` - List available templates by language
+- `build_query` - Combine multiple pattern types into a single query
+- `find_pattern` - Search for custom patterns in code
+
+#### 4. Code Analysis
+- `get_symbols` - Extract functions, classes, imports, and other symbols
+- `analyze_complexity` - Calculate cyclomatic complexity and other metrics
+- `get_dependencies` - Identify imports and dependencies
+- `list_languages` - List all supported programming languages
+
+#### 5. External Tools Integration
+- `tree_sitter_graph` - Generate graphs using the tree-sitter-graph CLI tool with TSG queries
+
+## Installation
+
+### Prerequisites
+- Python 3.10+
+- pip or uv package manager
+
+### Install from source
+
+```bash
+cd treesitter-mcp-new
+pip install -e .
+
+# For graph visualization support (PNG/SVG)
+pip install graphviz
+```
+
+## Usage
+
+### Running the Server
+
+```bash
+# Run directly
+python -m treesitter_mcp_new.server
+
+# Or use the installed script
+treesitter-mcp-new
+```
+
+### Running with Docker
+
+The Docker image provides a consistent, isolated environment with all dependencies pre-installed. The multi-stage build ensures a minimal runtime image.
+
+#### Prerequisites
+- Docker installed and running
+- For graph visualization (PNG/SVG), the image includes graphviz
+
+#### Build the Docker Image
+
+```bash
+# Build the image
+docker build -t treesitter-mcp:latest .
+
+# Or using docker-compose
+docker-compose build
+```
+
+#### Run the Container
+
+```bash
+# Run with stdin for MCP communication
+docker run -i --rm treesitter-mcp:latest
+
+# Or using docker-compose
+docker-compose run --rm treesitter-mcp
+```
+
+#### Test the Container
+
+```bash
+# Send a test MCP message
+echo '{"jsonrpc":"2.0","method":"initialize","params":{"capabilities":{}},"id":1}' | docker run -i --rm treesitter-mcp:latest
+
+# Run with custom command
+docker run --rm treesitter-mcp:latest -c "from treesitter_mcp_new.server import list_languages; import asyncio; print(asyncio.run(list_languages()))"
+```
+
+### Claude Desktop Configuration
+
+#### Local Installation
+
+Add to your Claude Desktop configuration file:
+
+**macOS/Linux:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+**Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "treesitter-enhanced": {
+      "command": "python",
+      "args": [
+        "-m",
+        "treesitter_mcp_new.server"
+      ],
+      "cwd": "/path/to/treesitter-mcp-new"
+    }
+  }
+}
+```
+
+#### Docker Installation
+
+For running the server via Docker:
+
+```json
+{
+  "mcpServers": {
+    "treesitter-enhanced": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "treesitter-mcp:latest"
+      ]
+    }
+  }
+}
+```
+
+#### Docker Compose Installation
+
+If using docker-compose:
+
+```json
+{
+  "mcpServers": {
+    "treesitter-enhanced": {
+      "command": "docker-compose",
+      "args": [
+        "run",
+        "--rm",
+        "treesitter-mcp"
+      ],
+      "cwd": "/path/to/treesitter-mcp-new"
+    }
+  }
+}
+```
+
+### Using with MCP Inspector
+
+Test the server with MCP Inspector:
+
+```bash
+# Install MCP Inspector
+npm install -g @modelcontextprotocol/inspector
+
+# Run the inspector
+mcp-inspector python -m treesitter_mcp_new.server
+```
+
+## Examples
+
+### Generate AST
+
+```python
+{
+  "tool": "generate_ast",
+  "arguments": {
+    "source_code": "def hello(name):\n    print(f'Hello, {name}!')",
+    "language": "python",
+    "max_depth": 3,
+    "include_text": true
+  }
+}
+```
+
+### Generate Graph Visualization
+
+```python
+# Generate DOT format
+{
+  "tool": "generate_graph",
+  "arguments": {
+    "source_code": "function add(a, b) { return a + b; }",
+    "language": "javascript",
+    "format": "dot"
+  }
+}
+
+# Generate PNG image (requires graphviz)
+{
+  "tool": "generate_graph",
+  "arguments": {
+    "source_code": "class Example { constructor() {} }",
+    "language": "javascript",
+    "format": "png",
+    "max_nodes": 50
+  }
+}
+```
+
+### Extract Symbols
+
+```python
+{
+  "tool": "get_symbols",
+  "arguments": {
+    "source_code": "class MyClass:\n    def method(self):\n        pass",
+    "language": "python",
+    "symbol_types": ["classes", "functions"]
+  }
+}
+```
+
+### Execute Queries
+
+```python
+# Use predefined template
+{
+  "tool": "get_query_template",
+  "arguments": {
+    "language": "python",
+    "template_name": "functions"
+  }
+}
+
+# Custom query
+{
+  "tool": "query_code",
+  "arguments": {
+    "source_code": "def foo(): pass\ndef bar(): pass",
+    "language": "python",
+    "query_pattern": "(function_definition name: (identifier) @func_name)"
+  }
+}
+```
+
+### Analyze Code Complexity
+
+```python
+{
+  "tool": "analyze_complexity",
+  "arguments": {
+    "source_code": "def complex_function():\n    if x:\n        for i in range(10):\n            if i > 5:\n                print(i)",
+    "language": "python"
+  }
+}
+```
+
+### Use Tree-sitter Graph CLI
+
+**Note**: Requires `tree-sitter-graph` CLI to be installed (`npm install -g @tree-sitter/graph`)
+
+```python
+# With file paths
+{
+  "tool": "tree_sitter_graph",
+  "arguments": {
+    "tsg_file": "./queries.tsg",
+    "source_file": "./code.js",
+    "output_file": "./graph.json"
+  }
+}
+
+# With content strings (using temporary files)
+{
+  "tool": "tree_sitter_graph",
+  "arguments": {
+    "tsg_file": "(program (expression_statement) @stmt)",
+    "source_file": "console.log('hello world');",
+    "output_file": "./output_graph.json",
+    "create_temp_files": true
+  }
+}
+```
+
+## Supported Languages
+
+The server supports 100+ programming languages including:
+
+- **Popular Languages**: Python, JavaScript, TypeScript, Go, Rust, C, C++, Java, C#
+- **Web Technologies**: HTML, CSS, JSX, TSX, Vue, Svelte
+- **Scripting**: Bash, Ruby, PHP, Perl, Lua
+- **Functional**: Haskell, Clojure, Elm, OCaml, F#
+- **Systems**: Rust, Zig, Swift, Kotlin
+- **Config Files**: JSON, YAML, TOML, XML, Dockerfile
+- **And many more...**
+
+Use the `list_languages` tool to get the complete list of supported languages.
+
+## Key Advantages
+
+### From Local Implementation
+- **Graph Visualization**: Unique ability to generate visual representations of code structure
+- **Multiple Output Formats**: DOT, JSON, PNG, SVG support
+- **Simple Architecture**: Easy to understand and extend
+
+### From GitHub Implementation  
+- **Advanced AST Navigation**: Position-based node finding
+- **Query Templates**: Pre-built patterns for common code structures
+- **Comprehensive Analysis**: Symbol extraction, complexity metrics, dependency tracking
+- **Pattern Matching**: Flexible search using Tree-sitter queries
+
+## Architecture
+
+```
+treesitter-mcp-new/
+├── src/
+│   └── treesitter_mcp_new/
+│       ├── server.py           # Main MCP server with tool definitions
+│       └── utils/
+│           ├── tree_sitter_helpers.py  # Core parsing utilities
+│           ├── graph_generator.py      # Graph visualization
+│           ├── query_templates.py      # Language-specific templates
+│           └── code_analysis.py        # Analysis functions
+```
+
+## Development
+
+### Running Tests
+
+```bash
+# Install dev dependencies
+pip install -e ".[dev]"
+
+# Run tests
+pytest tests/
+```
+
+### Code Formatting
+
+```bash
+# Format with black
+black src/
+
+# Lint with ruff
+ruff check src/
+```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Language not supported error**
+   - Use `list_languages` tool to see available languages
+   - Language names are lowercase (e.g., 'python' not 'Python')
+
+2. **Graph generation fails**
+   - Install graphviz: `pip install graphviz`
+   - For system graphviz: `apt-get install graphviz` (Linux) or `brew install graphviz` (macOS)
+
+3. **Parse errors**
+   - Ensure source code encoding matches the `encoding` parameter
+   - Default encoding is UTF-8
+
+4. **Query syntax errors**
+   - Tree-sitter uses S-expression syntax
+   - Use `get_query_template` to see correct syntax examples
+
+## License
+
+MIT License - see LICENSE file for details
+
+## Acknowledgments
+
+This implementation combines the best features from:
+- Local tree-sitter-mcp implementation (graph visualization)
+- [wrale/mcp-server-tree-sitter](https://github.com/wrale/mcp-server-tree-sitter) (advanced analysis features)
+
+Built on:
+- [Tree-sitter](https://tree-sitter.github.io/tree-sitter/) parsing library
+- [FastMCP](https://github.com/jlowin/fastmcp) for MCP protocol handling
+- [tree-sitter-languages](https://github.com/grantjenks/py-tree-sitter-languages) for language support

@@ -1,0 +1,44 @@
+FROM python:3.11-slim
+
+# Install dependencies
+RUN apt-get update && \
+    apt-get install -y \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Inspektor-Gadget
+RUN ARCH=$(dpkg --print-architecture) && \
+    curl -fsSL "https://github.com/inspektor-gadget/inspektor-gadget/releases/download/v0.43.0/ig-linux-${ARCH}-v0.43.0.tar.gz" | \
+    tar -C /usr/local/bin -xzf - ig && \
+    chmod +x /usr/local/bin/ig
+
+# Create app directory
+WORKDIR /app
+
+# Copy application files
+COPY pyproject.toml .
+COPY src/ ./src/
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -e .
+
+# Create non-root user (but container needs to run as root for eBPF)
+# This is just for the file ownership
+RUN useradd -m -u 1000 mcp && \
+    chown -R mcp:mcp /app
+
+# Environment variables
+ENV IG_BINARY_PATH=/usr/local/bin/ig \
+    MCP_SERVER_NAME=inspektor-gadget \
+    LOG_LEVEL=INFO
+
+# The container must run as root for eBPF capabilities
+USER root
+
+# Entry point - run the MCP server module directly
+ENTRYPOINT ["python", "-m", "inspektor_mcp"]
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD ig version || exit 1

@@ -1,0 +1,38 @@
+# Simple Dockerfile using system package manager for Universal CTags
+
+FROM python:3.11-slim
+
+# Install Universal CTags and other dependencies
+RUN apt-get update && apt-get install -y \
+    universal-ctags \
+    git \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /app
+
+# Copy application files
+COPY pyproject.toml README.md ./
+COPY src/ ./src/
+
+# Install Python dependencies
+RUN pip install --no-cache-dir . \
+    && pip install --no-cache-dir python-ctags3
+
+# Set Python path
+ENV PYTHONPATH=/app/src
+ENV CTAGS_BINARY=/usr/bin/ctags
+
+# Create workspace directory
+RUN mkdir -p /workspace
+
+# Set working directory to workspace
+WORKDIR /workspace
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD python -c "import ctags_mcp; print('healthy')" || exit 1
+
+# Run the MCP server
+CMD ["python", "-m", "ctags_mcp.server"]

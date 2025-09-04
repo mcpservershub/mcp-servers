@@ -1,0 +1,40 @@
+; Working TSG for JavaScript with tree-sitter-graph v0.12.0
+; Compatible with tree-sitter-javascript v0.20.1
+
+; Variable declarations
+(variable_declarator
+  name: (identifier) @var_name)
+{
+  node var_node
+  attr (var_node) type = "variable"
+  attr (var_node) name = (source-text @var_name)
+}
+
+; Function expressions
+(function
+  name: (identifier) @func_name)
+{
+  node func_node
+  attr (func_node) type = "function"
+  attr (func_node) name = (source-text @func_name)
+}
+
+; Object properties in module.exports
+(pair
+  key: (property_identifier) @prop_key
+  value: (identifier) @prop_value)
+{
+  node prop_node
+  attr (prop_node) type = "object_property"
+  attr (prop_node) key = (source-text @prop_key)
+  attr (prop_node) value = (source-text @prop_value)
+}
+
+; Return statements
+(return_statement
+  (identifier) @return_value)
+{
+  node return_node
+  attr (return_node) type = "return"
+  attr (return_node) value = (source-text @return_value)
+}

@@ -1,0 +1,31 @@
+{
+  "mcpServers": {
+    "inspektor-gadget": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "--privileged",
+        "--pid=host",
+        "--network=host",
+        "-v", "/sys/kernel/debug:/sys/kernel/debug:ro",
+        "-v", "/sys/fs/bpf:/sys/fs/bpf:rw",
+        "-v", "/sys/fs/cgroup:/sys/fs/cgroup:ro",
+        "-v", "/proc:/host/proc:ro",
+        "-v", "/var/run/docker.sock:/var/run/docker.sock:ro",
+        "inspektor-gadget-mcp:latest"
+      ],
+      "description": "Inspektor-Gadget MCP Server for eBPF-based observability"
+    },
+    "inspektor-gadget-local": {
+      "command": "sudo",
+      "args": ["python", "-m", "mcp.server.stdio", "inspektor_mcp.server:mcp"],
+      "env": {
+        "PYTHONPATH": "/path/to/inspektor-gadget-mcp/src",
+        "IG_BINARY_PATH": "/usr/local/bin/ig"
+      },
+      "description": "Local Inspektor-Gadget MCP Server (requires sudo)"
+    }
+  }
+}

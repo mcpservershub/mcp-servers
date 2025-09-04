@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "strace": {
+      "command": "uv",
+      "args": ["run", "python", "-m", "strace_mcp.server"],
+      "cwd": "/home/santosh/strace",
+      "env": {
+        "PYTHONPATH": "/home/santosh/strace/src"
+      }
+    }
+  }
+}
