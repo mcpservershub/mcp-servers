@@ -78,6 +78,7 @@ jobs:
 
       - name: Push OCI artifact
         id: push
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           # Push OCI artifact using genval (expects directory, not tar)
           # Use short commit SHA as tag to avoid issues with branch names containing slashes
@@ -102,6 +103,7 @@ jobs:
         uses: sigstore/cosign-installer@v3
 
       - name: Sign Artifact with Cosign
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           COSIGN_EXPERIMENTAL: 1
         run: |

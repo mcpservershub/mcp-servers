@@ -19,6 +19,7 @@ on:
 env:
   REGISTRY: ghcr.io
   REPOSITORY: ${{ github.repository }}
+  IMAGE_NAME: ${{ github.repository_owner }}/mise-tasks-mcp
 
 jobs:
   build:
@@ -78,6 +79,7 @@ jobs:
 
       - name: Push OCI artifact
         id: push
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           # Debug: Check if dist directory exists and list contents
           echo "Checking mise-tasks-mcp/dist directory:"
@@ -106,6 +108,7 @@ jobs:
         uses: sigstore/cosign-installer@v3
 
       - name: Sign Artifact with Cosign
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
           COSIGN_EXPERIMENTAL: 1
         run: |
