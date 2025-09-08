@@ -1,0 +1,141 @@
+name: Build MeiliSearch MCP Docker Image
+
+on:
+  # Trigger on push to the docker directory (where Dockerfile is maintained)
+  push:
+    paths:
+      - "track-upstream/**"
+      - ".github/workflows/build-meilisearch-mcp.yml"
+
+  # Trigger on manual dispatch
+  workflow_dispatch:
+
+  # Schedule to check upstream repository daily at 2 AM UTC
+  schedule:
+    - cron: "0 * * * *"
+
+  # Trigger when upstream repository is updated (using repository_dispatch)
+  repository_dispatch:
+    types: [upstream-update]
+
+env:
+  UPSTREAM_REPO: meilisearch/meilisearch-mcp
+  DOCKER_REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/meilisearch-mcp
+
+jobs:
+  check-upstream:
+    runs-on: ubuntu-latest
+    outputs:
+      should_build: ${{ steps.check.outputs.should_build }}
+      upstream_sha: ${{ steps.check.outputs.upstream_sha }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get upstream repository latest commit
+        id: upstream
+        run: |
+          UPSTREAM_SHA=$(curl -s https://api.github.com/repos/${{ env.UPSTREAM_REPO }}/commits/main | jq -r '.sha')
+          echo "sha=$UPSTREAM_SHA" >> $GITHUB_OUTPUT
+          echo "Upstream SHA: $UPSTREAM_SHA"
+
+      - name: Get last built commit SHA
+        id: last_built
+        run: |
+          # Try to get the last built SHA from a file in the repo
+          if [ -f .last_upstream_sha ]; then
+            LAST_SHA=$(cat .last_upstream_sha)
+          else
+            LAST_SHA=""
+          fi
+          echo "sha=$LAST_SHA" >> $GITHUB_OUTPUT
+          echo "Last built SHA: $LAST_SHA"
+
+      - name: Check if build is needed
+        id: check
+        run: |
+          # Build if:
+          # 1. This is a manual trigger or push event
+          # 2. Upstream SHA has changed
+          # 3. We've never built before (no last SHA)
+
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]] || \
+             [[ "${{ github.event_name }}" == "push" ]] || \
+             [[ "${{ steps.upstream.outputs.sha }}" != "${{ steps.last_built.outputs.sha }}" ]] || \
+             [[ -z "${{ steps.last_built.outputs.sha }}" ]]; then
+            echo "should_build=true" >> $GITHUB_OUTPUT
+            echo "Build needed: true"
+          else
+            echo "should_build=false" >> $GITHUB_OUTPUT
+            echo "Build needed: false"
+          fi
+          echo "upstream_sha=${{ steps.upstream.outputs.sha }}" >> $GITHUB_OUTPUT
+
+  build-and-push:
+    needs: check-upstream
+    if: needs.check-upstream.outputs.should_build == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Clone upstream repository
+        run: |
+          git clone https://github.com/${{ env.UPSTREAM_REPO }}.git upstream-source
+          cd upstream-source
+          git checkout ${{ needs.check-upstream.outputs.upstream_sha }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.DOCKER_REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-,suffix=-{{date 'YYYYMMDD-HHmmss'}}
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=${{ needs.check-upstream.outputs.upstream_sha }},prefix=upstream-
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./upstream-source
+          file: ./Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            UPSTREAM_SHA=${{ needs.check-upstream.outputs.upstream_sha }}
+            BUILD_DATE=${{ github.event.repository.updated_at }}
+
+      - name: Update last built SHA
+        run: |
+          echo "${{ needs.check-upstream.outputs.upstream_sha }}" > .last_upstream_sha
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add .last_upstream_sha
+          git diff --staged --quiet || (git commit -m "Update last built upstream SHA to ${{ needs.check-upstream.outputs.upstream_sha }}" && git push)
+
+      - name: Create release notes
+        if: success()
+        run: |
+          echo "Successfully built Docker image from upstream commit: ${{ needs.check-upstream.outputs.upstream_sha }}" > release-notes.txt
+          echo "Image tags: ${{ steps.meta.outputs.tags }}" >> release-notes.txt
+          echo "Upstream repository: https://github.com/${{ env.UPSTREAM_REPO }}" >> release-notes.txt
