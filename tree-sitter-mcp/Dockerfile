@@ -38,7 +38,7 @@ RUN cargo install --features cli tree-sitter-graph
 # Set working directory
 WORKDIR /app
 
-COPY languages/ ./languages
+# COPY languages/ ./languages
 
 # Create non-root user for security
 RUN addgroup mcp && adduser -D -G mcp mcp
@@ -49,10 +49,10 @@ RUN mkdir -p /home/mcp/.cargo/bin && \
   chown -R mcp:mcp /home/mcp/.cargo
 
 # Create the tree-sitter config directory for mcp user
-RUN mkdir -p /home/mcp/.config/tree-sitter && chown -R mcp:mcp /home/mcp/.config
+# RUN mkdir -p /home/mcp/.config/tree-sitter && chown -R mcp:mcp /home/mcp/.config
 
 # Copy the config.json file to the tree-sitter config directory
-COPY --chown=mcp:mcp config.json /home/mcp/.config/tree-sitter/config.json
+# COPY --chown=mcp:mcp config.json /home/mcp/.config/tree-sitter/config.json
 # Copy virtual environment from builder (includes installed package)
 COPY --from=builder --chown=mcp:mcp /opt/venv /opt/venv
 
