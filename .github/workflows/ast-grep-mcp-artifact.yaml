@@ -1,0 +1,109 @@
+# Simplified Python Package OCI Build
+# Works with ANY Python package that can be run with: python -m package_name
+
+name: Build & Push ast-grep-mcp OCI Artifact
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "ast-grep-mcp/**"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "ast-grep-mcp/**"
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  REPOSITORY: ${{ github.repository }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: read
+      id-token: write # Required for OIDC authentication with cosign
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Python and uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Build wheel
+        run: uv build --wheel --out-dir dist/
+        working-directory: ast-grep-mcp
+
+      - name: Setup Golang
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.24"
+
+      - name: Install Genval
+        run: |
+          go install github.com/intelops/genval@pre-main
+
+      - name: Create simple runner
+        run: |
+          # Extract package name from wheel
+          WHEEL=$(ls ast-grep-mcp/dist/*.whl | head -1)
+          PACKAGE_NAME=$(basename "$WHEEL" | cut -d'-' -f1 | tr '-' '_')
+
+          # Create a simple run script
+          cat > ast-grep-mcp/dist/run.sh << 'EOF'
+          #!/bin/bash
+          # Simple Python package runner
+          WHEEL=$(ls "$(dirname "$0")"/*.whl | head -1)
+          PKG=$(basename "$WHEEL" | cut -d'-' -f1 | tr '-' '_')
+
+          # Install and run
+          pip install "$WHEEL" --quiet
+          python -m "$PKG" "$@"
+          EOF
+          chmod +x ast-grep-mcp/dist/run.sh
+
+          # Create metadata
+          echo "{\"package\": \"$PACKAGE_NAME\", \"wheel\": \"$(basename $WHEEL)\"}" > ast-grep-mcp/dist/metadata.json
+
+      - name: Push OCI artifact
+        id: push
+        run: |
+          # Push OCI artifact using genval (expects directory, not tar)
+          TAG="${GITHUB_REF_NAME:-latest}"
+          IMAGE_URI="${{ env.REGISTRY }}/${{ env.REPOSITORY }}/ast-grep-mcp:$TAG"
+
+          # genval expects oci:// prefix for push
+          OUTPUT=$(genval artifact push --reqinput ast-grep-mcp/dist \
+          --dest "oci://$IMAGE_URI" \
+          --annotations="author=capten.ai" 2>&1)
+
+          echo "$OUTPUT"
+
+          # Extract digest from genval output
+          DIGEST=$(echo "$OUTPUT" | grep -oP 'sha256:[a-f0-9]{64}' | head -1)
+
+          echo "✅ Pushed to: $IMAGE_URI"
+          echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_OUTPUT
+          echo "IMAGE_DIGEST=${{ env.REGISTRY }}/${{ env.REPOSITORY }}/ast-grep-mcp@$DIGEST" >> $GITHUB_OUTPUT
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign Artifact with Cosign
+        env:
+          COSIGN_EXPERIMENTAL: 1
+        run: |
+          echo "Signing artifact ${{ steps.push.outputs.IMAGE_DIGEST }}"
+          # Sign using digest instead of tag to avoid timeout issues
+          cosign sign --yes ${{ steps.push.outputs.IMAGE_DIGEST }}
