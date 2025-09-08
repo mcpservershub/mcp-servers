@@ -80,7 +80,8 @@ jobs:
         id: push
         run: |
           # Push OCI artifact using genval (expects directory, not tar)
-          TAG="${GITHUB_REF_NAME:-latest}"
+          # Use short commit SHA as tag to avoid issues with branch names containing slashes
+          TAG="${GITHUB_SHA::7}"
           IMAGE_URI="${{ env.REGISTRY }}/${{ env.REPOSITORY }}/trivy-mcp-server:$TAG"
 
           # genval expects oci:// prefix for push

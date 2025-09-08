@@ -84,7 +84,8 @@ jobs:
           ls -la mise-tasks-mcp/dist/ || { echo "Error: dist directory not found"; exit 1; }
           
           # Push OCI artifact using genval (expects directory, not tar)
-          TAG="${GITHUB_REF_NAME:-latest}"
+          # Use short commit SHA as tag to avoid issues with branch names containing slashes
+          TAG="${GITHUB_SHA::7}"
           IMAGE_URI="${{ env.REGISTRY }}/${{ env.REPOSITORY }}/mise-tasks-mcp:$TAG"
 
           # genval expects oci:// prefix for push
