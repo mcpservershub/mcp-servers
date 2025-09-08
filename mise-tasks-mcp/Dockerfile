@@ -1,6 +1,6 @@
-# Multi-stage Dockerfile for mise-tasks-mcp
+# Chainguard-based multi-stage Dockerfile for mise-tasks-mcp
 
-# Build stage
+# Build stage using standard Python image
 FROM python:3.12-slim AS builder
 
 WORKDIR /build
@@ -15,38 +15,38 @@ RUN pip install --no-cache-dir build
 # Build the package
 RUN python -m build --wheel
 
-# Runtime stage
-FROM python:3.12-slim
+# Runtime stage using Chainguard Python
+FROM cgr.dev/chainguard/python:latest
 
-# Install runtime dependencies
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
+# Install runtime dependencies including bash for npm compatibility
+USER root
+RUN apk update && \
+    apk add --no-cache \
         curl \
         git \
+        bash \
         ca-certificates && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/cache/apk/*
 
 # Install mise
 RUN curl https://mise.run | sh && \
     mv ~/.local/bin/mise /usr/local/bin/mise
 
-# Create non-root user
-RUN useradd -m -u 1000 mcp && \
-    mkdir -p /app && \
-    chown -R mcp:mcp /app
+# Create app directory
+RUN mkdir -p /app && \
+    chown -R nonroot:nonroot /app
 
 WORKDIR /app
 
 # Copy built wheel from builder
-COPY --from=builder /build/dist/*.whl /tmp/
+COPY --from=builder --chown=nonroot:nonroot /build/dist/*.whl /tmp/
 
 # Install the package
 RUN pip install --no-cache-dir /tmp/*.whl && \
     rm /tmp/*.whl
 
 # Switch to non-root user
-USER mcp
+USER nonroot
 
 # Set environment
 ENV PYTHONUNBUFFERED=1
@@ -57,8 +57,5 @@ ENV MISE_CACHE_DIR=/app/.cache/mise
 # Create necessary directories
 RUN mkdir -p $MISE_DATA_DIR $MISE_CONFIG_DIR $MISE_CACHE_DIR
 
-# Expose MCP default port (if needed)
-EXPOSE 5000
-
 # Run the server
-CMD ["python", "-m", "mise_tasks_mcp.server"]
+ENTRYPOINT ["python", "-m", "mise_tasks_mcp.server"]

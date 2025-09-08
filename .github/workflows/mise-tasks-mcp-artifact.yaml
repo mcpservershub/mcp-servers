@@ -79,6 +79,10 @@ jobs:
       - name: Push OCI artifact
         id: push
         run: |
+          # Debug: Check if dist directory exists and list contents
+          echo "Checking mise-tasks-mcp/dist directory:"
+          ls -la mise-tasks-mcp/dist/ || { echo "Error: dist directory not found"; exit 1; }
+          
           # Push OCI artifact using genval (expects directory, not tar)
           TAG="${GITHUB_REF_NAME:-latest}"
           IMAGE_URI="${{ env.REGISTRY }}/${{ env.REPOSITORY }}/mise-tasks-mcp:$TAG"
@@ -86,7 +90,7 @@ jobs:
           # genval expects oci:// prefix for push
           OUTPUT=$(genval artifact push --reqinput mise-tasks-mcp/dist \
           --dest "oci://$IMAGE_URI" \
-          --annotations="author=capten.ai" 2>&1)
+          --annotations="author=capten.ai" 2>&1) || { echo "Genval push failed with exit code: $?"; echo "Output: $OUTPUT"; exit 1; }
 
           echo "$OUTPUT"
 
