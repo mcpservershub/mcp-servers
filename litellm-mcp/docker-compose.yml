@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  litellm-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: litellm-mcp-server:latest
+    container_name: litellm-mcp-server
+    environment:
+      # OpenAI
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      # Anthropic
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      # Azure
+      - AZURE_API_KEY=${AZURE_API_KEY}
+      - AZURE_API_BASE=${AZURE_API_BASE}
+      - AZURE_API_VERSION=${AZURE_API_VERSION}
+      # Google
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      # AWS
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_REGION_NAME=${AWS_REGION_NAME}
+      # Others
+      - COHERE_API_KEY=${COHERE_API_KEY}
+      - HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY}
+      - REPLICATE_API_KEY=${REPLICATE_API_KEY}
+      - TOGETHERAI_API_KEY=${TOGETHERAI_API_KEY}
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      # Configuration
+      - LITELLM_DEFAULT_MODEL=${LITELLM_DEFAULT_MODEL:-gpt-3.5-turbo}
+      - LITELLM_DEFAULT_TEMPERATURE=${LITELLM_DEFAULT_TEMPERATURE:-0.7}
+      - LITELLM_DEFAULT_MAX_TOKENS=${LITELLM_DEFAULT_MAX_TOKENS:-2000}
+      - LITELLM_ENABLE_CACHE=${LITELLM_ENABLE_CACHE:-true}
+      - LITELLM_LOG_LEVEL=${LITELLM_LOG_LEVEL:-INFO}
+    volumes:
+      # Optional: Mount config file
+      - ./config.yaml:/app/config/config.yaml:ro
+      # Optional: Mount cache directory
+      - litellm-cache:/home/mcp/.cache
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+    networks:
+      - litellm-network
+
+volumes:
+  litellm-cache:
+    driver: local
+
+networks:
+  litellm-network:
+    driver: bridge

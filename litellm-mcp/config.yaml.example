@@ -1,0 +1,82 @@
+# LiteLLM MCP Server Configuration Example
+# Copy this file to config.yaml and customize for your needs
+
+# API Keys (can also be set via environment variables)
+openai_api_key: ${OPENAI_API_KEY}
+anthropic_api_key: ${ANTHROPIC_API_KEY}
+azure_api_key: ${AZURE_API_KEY}
+azure_api_base: ${AZURE_API_BASE}
+azure_api_version: "2024-02-15-preview"
+google_api_key: ${GOOGLE_API_KEY}
+aws_access_key_id: ${AWS_ACCESS_KEY_ID}
+aws_secret_access_key: ${AWS_SECRET_ACCESS_KEY}
+aws_region_name: "us-east-1"
+
+# Default Model Settings
+default_model: "gpt-3.5-turbo"
+default_temperature: 0.7
+default_max_tokens: 2000
+default_timeout: 30
+
+# Router Configuration
+enable_fallback: true
+fallback_models:
+  - "gpt-3.5-turbo"
+  - "claude-3-haiku-20240307"
+  - "gemini-pro"
+routing_strategy: "cost-optimized"  # Options: cost-optimized, latency-optimized, balanced
+
+# Budget Management
+enable_budget_tracking: true
+daily_budget_limit: 10.0  # USD
+alert_threshold: 0.8  # Alert at 80% of budget
+
+# Cache Configuration
+enable_cache: true
+cache_ttl: 3600  # seconds
+
+# Logging
+log_level: "INFO"  # Options: DEBUG, INFO, WARNING, ERROR
+log_requests: true
+
+# Model Preferences (optional)
+model_preferences:
+  chat:
+    primary: "gpt-4"
+    fallback: ["gpt-3.5-turbo", "claude-3-sonnet-20240229"]
+  embedding:
+    primary: "text-embedding-ada-002"
+    fallback: ["embed-english-v3.0"]
+  image:
+    primary: "dall-e-3"
+    fallback: ["dall-e-2", "stable-diffusion-xl"]
+
+# Provider-specific configurations (optional)
+providers:
+  openai:
+    organization: ""
+    timeout: 30
+  anthropic:
+    max_retries: 3
+    timeout: 30
+  azure:
+    deployment_id: ""
+    api_version: "2024-02-15-preview"
+  bedrock:
+    region: "us-east-1"
+    model_id: "anthropic.claude-v2"
+
+# Rate Limiting (optional)
+rate_limits:
+  requests_per_minute: 60
+  tokens_per_minute: 90000
+  requests_per_day: 1000
+
+# Advanced Settings (optional)
+advanced:
+  enable_streaming: true
+  enable_function_calling: true
+  enable_vision: true
+  max_parallel_requests: 10
+  retry_attempts: 3
+  retry_delay: 1  # seconds

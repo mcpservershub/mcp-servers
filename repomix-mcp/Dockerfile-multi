@@ -1,0 +1,55 @@
+# Multi-stage Dockerfile for Repomix MCP Server using Chainguard's wolfi-base
+
+# Stage 1: Build stage
+FROM cgr.dev/chainguard/wolfi-base AS builder
+
+# Install build dependencies
+RUN apk update && apk add git nodejs npm
+
+# Set working directory for build
+WORKDIR /build
+
+# Copy package files first for better layer caching
+COPY package*.json ./
+
+# Install all dependencies (including dev dependencies needed for build)
+RUN npm ci
+
+# Copy source code
+COPY . .
+
+# Build the project
+RUN npm run build
+
+# Stage 2: Runtime stage
+FROM cgr.dev/chainguard/wolfi-base
+
+# Install only runtime dependencies
+RUN apk update && apk add git nodejs npm && \
+    rm -rf /var/cache/apk/*
+
+# Create app directory
+RUN mkdir /repomix
+WORKDIR /repomix
+
+# Copy package files
+COPY package*.json ./
+
+# Copy built files from builder stage
+COPY --from=builder /build/lib ./lib
+COPY --from=builder /build/bin ./bin
+
+# Install only production dependencies and link globally
+RUN npm ci --omit=dev && \
+    npm link && \
+    npm cache clean --force
+
+# Set working directory for runtime
+WORKDIR /app
+
+# Verify installation
+RUN repomix --version
+
+# Start MCP Server
+ENTRYPOINT ["repomix"]
+CMD ["--mcp"]
