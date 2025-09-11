@@ -1,22 +1,17 @@
-name: Build Repomix MCP Docker Image V2
+name: Build repomix MCP Docker Image V2
 
 on:
   # Trigger on push to the docker directory (where Dockerfile is maintained)
   push:
-    branches:
-      - main
     paths:
       - "repomix-mcp/**"
-  pull_request:
-    branches:
-      - main
 
   # Trigger on manual dispatch
   workflow_dispatch:
 
   # Schedule to check upstream repository hourly
   schedule:
-    - cron: "* * * * 1"
+    - cron: "0 * * * *"
 
   # Trigger when upstream repository is updated (using repository_dispatch)
   repository_dispatch:
@@ -27,13 +22,13 @@ env:
   PROJECT_NAME: repomix-mcp
   DOCKER_REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}/repomix-mcp
-
 jobs:
   check-upstream:
     runs-on: ubuntu-latest
     outputs:
       should_build: ${{ steps.check.outputs.should_build }}
       upstream_sha: ${{ steps.check.outputs.upstream_sha }}
+      upstream_sha_short: ${{ steps.check.outputs.upstream_sha_short }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -78,6 +73,7 @@ jobs:
             echo "Build needed: false"
           fi
           echo "upstream_sha=${{ steps.upstream.outputs.sha }}" >> $GITHUB_OUTPUT
+          echo "upstream_sha_short=${UPSTREAM_SHA:0:7}" >> $GITHUB_OUTPUT
 
   build-and-push:
     needs: check-upstream
@@ -112,11 +108,9 @@ jobs:
         with:
           images: ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=sha,prefix={{branch}}-,suffix=-{{date 'YYYYMMDD-HHmmss'}}
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=raw,value=${{ needs.check-upstream.outputs.upstream_sha }},prefix=upstream-
+            type=raw,value=latest
+            type=raw,value=upstream-${{ needs.check-upstream.outputs.upstream_sha_short }}
+            type=raw,value=${{ needs.check-upstream.outputs.upstream_sha_short }}-{{date 'YYYYMMDD-HHmmss'}}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5

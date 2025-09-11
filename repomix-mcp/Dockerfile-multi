@@ -50,6 +50,6 @@ WORKDIR /app
 # Verify installation
 RUN repomix --version
 
-# Use ENTRYPOINT and CMD for flexibility
+# Start MCP Server
 ENTRYPOINT ["repomix"]
 CMD ["--mcp"]
