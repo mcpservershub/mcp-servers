@@ -28,7 +28,6 @@ FROM cgr.dev/chainguard/wolfi-base
 RUN apk update && apk add git nodejs npm && \
     rm -rf /var/cache/apk/*
 
-# Create app directory
 RUN mkdir /repomix
 WORKDIR /repomix
 

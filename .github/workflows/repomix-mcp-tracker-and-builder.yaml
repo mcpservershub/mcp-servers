@@ -3,15 +3,19 @@ name: Build repomix MCP Docker Image V2
 on:
   # Trigger on push to the docker directory (where Dockerfile is maintained)
   push:
+    branches:
+      - main
     paths:
       - "repomix-mcp/**"
-
+  pull_request:
+    branches:
+      - main
   # Trigger on manual dispatch
   workflow_dispatch:
 
   # Schedule to check upstream repository hourly
   schedule:
-    - cron: "0 * * * *"
+    - cron: "* * * * 1"
 
   # Trigger when upstream repository is updated (using repository_dispatch)
   repository_dispatch:
