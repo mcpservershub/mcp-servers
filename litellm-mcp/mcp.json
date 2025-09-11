@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "litellm": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "litellm-mcp-server:test"
+      ]
+    }
+  }
+}
