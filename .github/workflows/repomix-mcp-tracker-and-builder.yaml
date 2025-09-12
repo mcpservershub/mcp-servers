@@ -124,7 +124,7 @@ jobs:
 
       - name: Copy Dockerfile to build context
         run: |
-          cp ./Dockerfile ./upstream-source/Dockerfile
+          cp -v ./repomix-mcp/Dockerfile ./upstream-source/Dockerfile
           echo "Copied Dockerfile to upstream-source directory"
 
       - name: Set up Docker Buildx
@@ -141,7 +141,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./upstream-source
-          file: ./Dockerfile
+          file: ./upstream-source/Dockerfile
           push: true
           tags: |
             ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
