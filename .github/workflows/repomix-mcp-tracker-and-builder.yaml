@@ -10,6 +10,8 @@ on:
   pull_request:
     branches:
       - main
+    paths:
+      - "repomix-mcp/**"
   # Trigger on manual dispatch
   workflow_dispatch:
 

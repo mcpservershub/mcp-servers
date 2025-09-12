@@ -1,17 +1,17 @@
 # Lightweight Dockerfile for OneFileLLM MCP Server
-FROM cgr.dev/chainguard/wolfi-base AS builder
+FROM python:3.12-alpine
 
 # Accept GitHub token as build argument
 ARG GITHUB_TOKEN
 ENV GITHUB_TOKEN=${GITHUB_TOKEN}
 
 # Install required system packages (minimal)
-RUN apk update && apk add --no-cache \
-  python-3.12 py3.12-pip \
-  git \
-  gcc \
-  libffi-dev \
-  && rm -rf /var/cache/apk/*
+RUN apk add --no-cache \
+    git \
+    gcc \
+    musl-dev \
+    libffi-dev \
+    && rm -rf /var/cache/apk/*
 
 # Set working directory
 WORKDIR /app
@@ -22,10 +22,10 @@ COPY src/ ./src/
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -e . && \
-  pip cache purge
+    pip cache purge
 
 # Create non-root user
-RUN addgroup mcp && adduser -D -G mcp mcp
+RUN adduser -D -u 1000 mcp
 USER mcp
 
 # Environment settings
