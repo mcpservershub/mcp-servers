@@ -120,15 +120,7 @@ jobs:
         run: |
           git clone https://github.com/${{ env.UPSTREAM_REPO }}.git upstream-source
           cd upstream-source
-          git checkout ${{ needs.check-upstream.outputs.upstream_sha }}/usr/bin/docker buildx build --build-arg UPSTREAM_SHA=3d523bbdde5468154d9023f996b84e9673b88d79 --build-arg BUILD_DATE=2025-09-12T16:58:08Z --cache-from type=gha --cache-to type=gha,mode=max --file /Dockerfile --iidfile /home/runner/work/_temp/docker-actions-toolkit-PQoGrh/build-iidfile-8a7ef8d8a2.txt --attest type=provenance,mode=max,builder-id=https://github.com/mcpservershub/mcp-servers/actions/runs/17680919876 --tag ghcr.io/mcpservershub/mcp-servers/repomix-mcp:latest --tag ghcr.io/mcpservershub/mcp-servers/repomix-mcp:upstream-3d523bb --tag ghcr.io/mcpservershub/mcp-servers/repomix-mcp:3d523bb-20250912-165808 --metadata-file /home/runner/work/_temp/docker-actions-toolkit-PQoGrh/build-metadata-ddc4e70347.json --push ./upstream-source
-#0 building with "builder-44d63ae0-eac2-4658-97fa-1b19bf479080" instance using docker-container driver
-
-#1 [internal] load build definition from Dockerfile
-#1 transferring dockerfile: 2B done
-#1 DONE 0.0s
-ERROR: failed to build: failed to solve: failed to read dockerfile: open Dockerfile: no such file or directory
-Error: buildx failed with: ERROR: failed to build: failed to solve: failed to read dockerfile: open Dockerfile: no such file or directory
-
+          git checkout ${{ needs.check-upstream.outputs.upstream_sha }}
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
