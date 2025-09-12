@@ -121,6 +121,12 @@ jobs:
           git clone https://github.com/${{ env.UPSTREAM_REPO }}.git upstream-source
           cd upstream-source
           git checkout ${{ needs.check-upstream.outputs.upstream_sha }}
+
+      - name: Copy Dockerfile to build context
+        run: |
+          cp ./Dockerfile ./upstream-source/Dockerfile
+          echo "Copied Dockerfile to upstream-source directory"
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
