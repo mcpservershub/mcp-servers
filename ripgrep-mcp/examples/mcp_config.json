@@ -1,0 +1,26 @@
+{
+  "mcpServers": {
+    "ripgrep": {
+      "command": "python",
+      "args": ["-m", "ripgrep_mcp.server"],
+      "env": {
+        "RG_MAX_RESULTS": "1000",
+        "RG_TIMEOUT": "30",
+        "RG_DEFAULT_PATH": "${PWD}",
+        "RG_ALLOW_OUTSIDE_WORKSPACE": "false"
+      }
+    },
+    "ripgrep-docker": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-v", "${PWD}:/workspace:ro",
+        "--env", "RG_MAX_RESULTS=500",
+        "--env", "RG_TIMEOUT=60",
+        "ripgrep-mcp:latest"
+      ]
+    }
+  }
+}
