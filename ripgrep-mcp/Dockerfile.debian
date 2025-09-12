@@ -1,0 +1,64 @@
+# Multi-stage Dockerfile for Ripgrep MCP Server
+
+# Stage 1: Builder
+FROM python:3.12-slim AS builder
+
+# Set working directory
+WORKDIR /build
+
+# Copy project files
+COPY pyproject.toml README.md ./
+COPY src/ ./src/
+
+# Install dependencies using pip
+RUN pip install --no-cache-dir .
+
+# Stage 2: Runtime
+FROM python:3.12-slim
+
+# Install ripgrep
+RUN apt-get update && apt-get install -y \
+    ripgrep \
+    && rm -rf /var/lib/apt/lists/* \
+    && which rg
+
+# Create non-root user
+RUN useradd -m -u 1000 -s /bin/bash mcpuser
+
+# Set working directory
+WORKDIR /app
+
+# Copy installed packages from builder
+COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+
+# Copy application code
+COPY --chown=mcpuser:mcpuser src/ ./src/
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV RG_BINARY_PATH=/usr/bin/rg
+ENV RG_MAX_RESULTS=1000
+ENV RG_TIMEOUT=30
+ENV RG_DEFAULT_PATH=/workspace
+ENV RG_ALLOW_OUTSIDE_WORKSPACE=false
+
+# Create workspace directory
+RUN mkdir -p /workspace && chown mcpuser:mcpuser /workspace
+
+# Switch to non-root user
+USER mcpuser
+
+# Set the entry point to run the module directly
+ENTRYPOINT ["python", "-m", "ripgrep_mcp"]
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD python -c "import sys; sys.exit(0)" || exit 1
+
+# Labels
+LABEL org.opencontainers.image.title="Ripgrep MCP Server"
+LABEL org.opencontainers.image.description="MCP Server for ripgrep - powerful text search capabilities"
+LABEL org.opencontainers.image.version="0.1.0"
+LABEL org.opencontainers.image.authors="capten.ai"
+LABEL org.opencontainers.image.licenses="MIT"

@@ -3,15 +3,19 @@ name: Build repomix MCP Docker Image V2
 on:
   # Trigger on push to the docker directory (where Dockerfile is maintained)
   push:
+    branches:
+      - main
     paths:
       - "repomix-mcp/**"
-
+  pull_request:
+    branches:
+      - main
   # Trigger on manual dispatch
   workflow_dispatch:
 
   # Schedule to check upstream repository hourly
   schedule:
-    - cron: "0 * * * *"
+    - cron: "* * * * 1"
 
   # Trigger when upstream repository is updated (using repository_dispatch)
   repository_dispatch:
@@ -22,6 +26,7 @@ env:
   PROJECT_NAME: repomix-mcp
   DOCKER_REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}/repomix-mcp
+
 jobs:
   check-upstream:
     runs-on: ubuntu-latest
@@ -38,7 +43,9 @@ jobs:
         run: |
           UPSTREAM_SHA=$(curl -s https://api.github.com/repos/${{ env.UPSTREAM_REPO }}/commits/main | jq -r '.sha')
           echo "sha=$UPSTREAM_SHA" >> $GITHUB_OUTPUT
+          echo "sha_short=${UPSTREAM_SHA:0:7}" >> $GITHUB_OUTPUT
           echo "Upstream SHA: $UPSTREAM_SHA"
+          echo "Upstream SHA (short): ${UPSTREAM_SHA:0:7}"
 
       - name: Get last built commit SHA
         id: last_built
@@ -73,7 +80,7 @@ jobs:
             echo "Build needed: false"
           fi
           echo "upstream_sha=${{ steps.upstream.outputs.sha }}" >> $GITHUB_OUTPUT
-          echo "upstream_sha_short=${UPSTREAM_SHA:0:7}" >> $GITHUB_OUTPUT
+          echo "upstream_sha_short=${{ steps.upstream.outputs.sha_short }}" >> $GITHUB_OUTPUT
 
   build-and-push:
     needs: check-upstream
@@ -85,6 +92,27 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Prepare
+        id: prep
+        run: |
+          # Ensure we have a short SHA
+          UPSTREAM_SHA="${{ needs.check-upstream.outputs.upstream_sha }}"
+          UPSTREAM_SHA_SHORT="${{ needs.check-upstream.outputs.upstream_sha_short }}"
+
+          # Fallback if short SHA is empty
+          if [ -z "$UPSTREAM_SHA_SHORT" ]; then
+            UPSTREAM_SHA_SHORT=${UPSTREAM_SHA::7}
+            echo "Using fallback short SHA: $UPSTREAM_SHA_SHORT"
+          fi
+
+          # Generate timestamp
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+
+          # Output for use in subsequent steps
+          echo "upstream_sha_short=${UPSTREAM_SHA_SHORT}" >> $GITHUB_OUTPUT
+          echo "timestamp=${TIMESTAMP}" >> $GITHUB_OUTPUT
+          echo "build_date=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
 
       - name: Clone upstream repository
         run: |
@@ -102,29 +130,21 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=raw,value=latest
-            type=raw,value=upstream-${{ needs.check-upstream.outputs.upstream_sha_short }}
-            type=raw,value=${{ needs.check-upstream.outputs.upstream_sha_short }}-{{date 'YYYYMMDD-HHmmss'}}
-
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: ./upstream-source
           file: ./Dockerfile
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: |
+            ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:upstream-${{ steps.prep.outputs.upstream_sha_short }}
+            ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.prep.outputs.upstream_sha_short }}-${{ steps.prep.outputs.timestamp }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
             UPSTREAM_SHA=${{ needs.check-upstream.outputs.upstream_sha }}
-            BUILD_DATE=${{ github.event.repository.updated_at }}
+            BUILD_DATE=${{ steps.prep.outputs.build_date }}
 
       - name: Update last built SHA
         run: |
@@ -147,10 +167,3 @@ jobs:
             git commit -m "Update ${{ env.PROJECT_NAME }} upstream SHA to ${{ needs.check-upstream.outputs.upstream_sha }}" && 
             git push
           )
-
-      - name: Create release notes
-        if: success()
-        run: |
-          echo "Successfully built Docker image from upstream commit: ${{ needs.check-upstream.outputs.upstream_sha }}" > release-notes.txt
-          echo "Image tags: ${{ steps.meta.outputs.tags }}" >> release-notes.txt
-          echo "Upstream repository: https://github.com/${{ env.UPSTREAM_REPO }}" >> release-notes.txt
