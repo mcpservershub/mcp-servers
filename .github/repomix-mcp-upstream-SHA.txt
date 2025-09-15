@@ -1,0 +1,6 @@
+# This file tracks the last built upstream commit SHA for repomix-mcp
+# Auto-updated by GitHub Actions
+
+SHA: a543f883cb893c9c9759edbed48232b5da01417d
+Timestamp: 2025-09-15 01:49:26 UTC
+Upstream: https://github.com/yamadashy/repomix/commit/a543f883cb893c9c9759edbed48232b5da01417d
