@@ -84,6 +84,7 @@ jobs:
           echo "upstream_sha=${{ steps.upstream.outputs.sha }}" >> $GITHUB_OUTPUT
           echo "upstream_sha_short=${{ steps.upstream.outputs.sha_short }}" >> $GITHUB_OUTPUT
 
+  # Push only on PR merge
   build-and-push:
     needs: check-upstream
     if: needs.check-upstream.outputs.should_build == 'true'
