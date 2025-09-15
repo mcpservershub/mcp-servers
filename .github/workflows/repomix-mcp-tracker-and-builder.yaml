@@ -17,7 +17,7 @@ on:
 
   # Schedule to check upstream repository hourly
   schedule:
-    - cron: "* * * * 1"
+    - cron: "0 0 * * 1"
 
   # Trigger when upstream repository is updated (using repository_dispatch)
   repository_dispatch:
