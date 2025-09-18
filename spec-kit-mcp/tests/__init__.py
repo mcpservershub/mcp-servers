@@ -1,0 +1,1 @@
+"""Tests for spec-kit MCP server."""

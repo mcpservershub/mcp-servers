@@ -1,0 +1,2 @@
+[console_scripts]
+spec-kit-mcp = spec_kit_mcp.__main__:main

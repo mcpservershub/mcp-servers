@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  # Default React configuration
+  shadcn-mcp-react:
+    build: .
+    image: shadcn-ui-mcp-server:latest
+    container_name: shadcn-mcp-react
+    environment:
+      - FRAMEWORK=react
+      - GITHUB_API_KEY=${GITHUB_API_KEY:-}  # Optional: Set in .env file
+      - NODE_ENV=production
+    restart: unless-stopped
+    profiles: ["react"]
+
+  # Vue framework configuration
+  shadcn-mcp-vue:
+    build: .
+    image: shadcn-ui-mcp-server:latest
+    container_name: shadcn-mcp-vue
+    environment:
+      - FRAMEWORK=vue
+      - GITHUB_API_KEY=${GITHUB_API_KEY:-}
+      - NODE_ENV=production
+    restart: unless-stopped
+    profiles: ["vue"]
+
+  # Svelte framework configuration
+  shadcn-mcp-svelte:
+    build: .
+    image: shadcn-ui-mcp-server:latest
+    container_name: shadcn-mcp-svelte
+    environment:
+      - FRAMEWORK=svelte
+      - GITHUB_API_KEY=${GITHUB_API_KEY:-}
+      - NODE_ENV=production
+    restart: unless-stopped
+    profiles: ["svelte"]
+
+  # React Native configuration
+  shadcn-mcp-react-native:
+    build: .
+    image: shadcn-ui-mcp-server:latest
+    container_name: shadcn-mcp-react-native
+    environment:
+      - FRAMEWORK=react-native
+      - GITHUB_API_KEY=${GITHUB_API_KEY:-}
+      - NODE_ENV=production
+    restart: unless-stopped
+    profiles: ["react-native"]
+
+  # All frameworks (for development/testing)
+  shadcn-mcp-all:
+    build: .
+    image: shadcn-ui-mcp-server:latest
+    container_name: shadcn-mcp-all
+    environment:
+      - FRAMEWORK=${FRAMEWORK:-react}  # Can be overridden via .env
+      - GITHUB_API_KEY=${GITHUB_API_KEY:-}
+      - NODE_ENV=${NODE_ENV:-production}
+    restart: unless-stopped
+    profiles: ["all"]
+    # Optional: Add volume mounts if needed for caching
+    # volumes:
+    #   - ./cache:/app/cache

@@ -1,0 +1,548 @@
+Metadata-Version: 2.4
+Name: spec-kit-mcp
+Version: 0.1.0
+Summary: MCP Server for spec-kit - Spec-Driven Development workflows
+Author-email: Spec-Kit MCP Team <spec-kit-mcp@example.com>
+License: MIT
+Keywords: mcp,spec-kit,sdd,specification,development
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+Requires-Dist: mcp[cli]>=1.0.0
+Requires-Dist: pydantic>=2.9.0
+Requires-Dist: GitPython>=3.1.43
+Requires-Dist: Jinja2>=3.1.4
+Requires-Dist: httpx>=0.27.0
+Requires-Dist: aiofiles>=24.1.0
+Requires-Dist: PyYAML>=6.0.2
+Requires-Dist: python-dotenv>=1.0.1
+Requires-Dist: typing-extensions>=4.12.0
+Provides-Extra: dev
+Requires-Dist: pytest>=8.3.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.24.0; extra == "dev"
+Requires-Dist: pytest-mock>=3.14.0; extra == "dev"
+Requires-Dist: pytest-cov>=5.0.0; extra == "dev"
+Requires-Dist: black>=24.8.0; extra == "dev"
+Requires-Dist: ruff>=0.7.0; extra == "dev"
+Requires-Dist: mypy>=1.11.0; extra == "dev"
+Requires-Dist: coverage>=7.6.0; extra == "dev"
+
+# Spec-Kit MCP Server
+
+A Model Context Protocol (MCP) server for [spec-kit](https://github.com/github/spec-kit), providing programmatic access to Spec-Driven Development (SDD) workflows through 15+ powerful tools.
+
+## Features
+
+- **15+ MCP Tools**: Complete coverage of the SDD workflow
+- **FastMCP Framework**: Built with the latest MCP SDK for optimal performance
+- **Docker Support**: Multi-stage builds for production deployment
+- **Async/Await**: Non-blocking operations for better performance
+- **Comprehensive Error Handling**: Detailed error messages with suggestions
+- **Type Safety**: Full Pydantic validation for inputs and outputs
+- **Git Integration**: Native Git operations for branch and repository management
+- **Template Processing**: Jinja2-based template system
+- **GitHub Integration**: Automatic template downloads from releases
+
+## Quick Start
+
+### Using Docker (Recommended)
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/spec-kit-mcp.git
+cd spec-kit-mcp
+
+# Copy environment variables
+cp .env.example .env
+# Edit .env with your GitHub token
+
+# Build and run with Docker Compose
+docker-compose up -d
+
+# View logs
+docker-compose logs -f spec-kit-mcp
+```
+
+### Local Installation with uv
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/spec-kit-mcp.git
+cd spec-kit-mcp
+
+# Install uv if not already installed
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Create virtual environment and install dependencies
+uv venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+uv pip install -e .
+
+# Copy and configure environment
+cp .env.example .env
+# Edit .env with your settings
+
+# Run the server
+python -m spec_kit_mcp
+```
+
+## Available Tools
+
+### Project Management
+
+#### `spec_kit_init`
+Initialize a new Spec-Kit project with templates and structure.
+
+**Parameters:**
+- `project_name` (string, optional): Name for the project directory
+- `ai_assistant` (string): AI assistant to configure for (`claude`, `gemini`, or `copilot`)
+- `use_current_dir` (boolean): Initialize in current directory
+- `skip_git` (boolean): Skip git repository initialization
+- `ignore_agent_tools` (boolean): Skip checks for AI agent tools
+
+#### `spec_kit_check`
+Check for required tools and system compatibility.
+
+**Parameters:** None
+
+### Specification Tools
+
+#### `spec_kit_specify`
+Create a new feature specification and branch.
+
+**Parameters:**
+- `feature_description` (string): Natural language description of the feature
+- `mark_clarifications` (boolean): Mark ambiguities with [NEEDS CLARIFICATION]
+
+#### `spec_kit_validate_spec`
+Validate a specification against the review checklist.
+
+**Parameters:**
+- `spec_path` (string): Path to spec.md file to validate
+
+### Planning Tools
+
+#### `spec_kit_plan`
+Create technical implementation plan from feature specification.
+
+**Parameters:**
+- `tech_stack` (string): Technology stack and architecture choices
+- `language` (string): Primary programming language
+- `framework` (string): Primary framework
+- `storage` (string, optional): Database/storage solution
+- `project_type` (string): Project structure type (`single`, `web`, or `mobile`)
+
+#### `spec_kit_research`
+Research technical decisions and best practices.
+
+**Parameters:**
+- `topics` (array): List of topics to research
+- `context` (string): Feature context for research
+
+### Task Management
+
+#### `spec_kit_generate_tasks`
+Break down implementation plan into numbered, executable tasks.
+
+**Parameters:**
+- `include_parallel_markers` (boolean): Mark tasks that can run in parallel with [P]
+- `enforce_tdd` (boolean): Enforce test-driven development order
+
+#### `spec_kit_task_status`
+Get or update task completion status.
+
+**Parameters:**
+- `task_id` (string): Task identifier (e.g., T001)
+- `status` (string, optional): New status (`pending`, `in_progress`, `completed`, `blocked`)
+- `notes` (string, optional): Additional notes about the task
+
+### Constitution & Compliance
+
+#### `spec_kit_check_constitution`
+Check plan/implementation against constitutional requirements.
+
+**Parameters:**
+- `check_type` (string): Type of check (`simplicity`, `architecture`, `testing`, `observability`, `versioning`)
+- `artifact_path` (string): Path to artifact to check
+
+#### `spec_kit_complexity_tracking`
+Track and justify necessary complexity violations.
+
+**Parameters:**
+- `violation` (string): Description of the violation
+- `justification` (string): Why the complexity is needed
+- `alternatives_rejected` (string): Why simpler alternatives won't work
+
+### Context Management
+
+#### `spec_kit_update_context`
+Update agent-specific context files with new technology stack.
+
+**Parameters:**
+- `agent_type` (string): Which agent context to update (`claude`, `gemini`, or `copilot`)
+- `technologies` (object, optional): New technologies to add
+- `recent_changes` (array, optional): Recent feature changes
+
+### Workflow Tools
+
+#### `spec_kit_current_branch`
+Get information about the current feature branch.
+
+**Parameters:** None
+
+#### `spec_kit_list_features`
+List all feature branches with their specifications.
+
+**Parameters:**
+- `status_filter` (string): Filter by status (`all`, `draft`, `planned`, `in_progress`, `completed`)
+
+### Documentation
+
+#### `spec_kit_generate_quickstart`
+Generate quickstart documentation from feature specifications.
+
+**Parameters:**
+- `include_test_scenarios` (boolean): Include test scenarios in quickstart
+- `format` (string): Output format (`markdown`, `html`, or `pdf`)
+
+#### `spec_kit_generate_contracts`
+Generate OpenAPI/GraphQL contracts from feature requirements.
+
+**Parameters:**
+- `contract_type` (string): Type of contract (`openapi`, `graphql`, or `grpc`)
+- `include_tests` (boolean): Generate contract tests
+
+## MCP Configuration
+
+### Standalone Application Configuration
+
+Create an MCP configuration file for your application:
+
+```json
+{
+  "mcpServers": {
+    "spec-kit": {
+      "command": "python",
+      "args": ["-m", "spec_kit_mcp"],
+      "env": {
+        "SPEC_KIT_REPO_PATH": "/path/to/your/repo",
+        "GITHUB_TOKEN": "your-github-token",
+        "SPEC_KIT_DEFAULT_AI": "claude"
+      }
+    }
+  }
+}
+```
+
+### Docker Container Configuration
+
+```json
+{
+  "mcpServers": {
+    "spec-kit": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "-v", "${PWD}:/workspace",
+        "-e", "GITHUB_TOKEN=${GITHUB_TOKEN}",
+        "spec-kit-mcp:latest"
+      ]
+    }
+  }
+}
+```
+
+## Testing with MCP Inspector
+
+### 1. Install MCP Inspector
+
+```bash
+npm install -g @modelcontextprotocol/inspector
+```
+
+### 2. Start the Server
+
+```bash
+# Using Docker
+docker-compose up
+
+# Or locally
+python -m spec_kit_mcp
+```
+
+### 3. Launch Inspector
+
+```bash
+mcp-inspector
+```
+
+### 4. Test Tool Examples
+
+#### Initialize a New Project
+
+```json
+{
+  "tool": "spec_kit_init",
+  "arguments": {
+    "project_name": "my-awesome-project",
+    "ai_assistant": "claude",
+    "skip_git": false,
+    "ignore_agent_tools": false
+  }
+}
+```
+
+#### Create a Feature Specification
+
+```json
+{
+  "tool": "spec_kit_specify",
+  "arguments": {
+    "feature_description": "Build a real-time chat system with message history, user presence indicators, and file sharing capabilities",
+    "mark_clarifications": true
+  }
+}
+```
+
+#### Generate Implementation Plan
+
+```json
+{
+  "tool": "spec_kit_plan",
+  "arguments": {
+    "tech_stack": "Python with FastAPI and WebSockets",
+    "language": "Python",
+    "framework": "FastAPI",
+    "storage": "PostgreSQL with Redis for caching",
+    "project_type": "web"
+  }
+}
+```
+
+#### Validate Specification
+
+```json
+{
+  "tool": "spec_kit_validate_spec",
+  "arguments": {
+    "spec_path": "/workspace/specs/001-chat-system/spec.md"
+  }
+}
+```
+
+#### Generate Tasks
+
+```json
+{
+  "tool": "spec_kit_generate_tasks",
+  "arguments": {
+    "include_parallel_markers": true,
+    "enforce_tdd": true
+  }
+}
+```
+
+#### Check System Requirements
+
+```json
+{
+  "tool": "spec_kit_check",
+  "arguments": {}
+}
+```
+
+#### Get Current Branch
+
+```json
+{
+  "tool": "spec_kit_current_branch",
+  "arguments": {}
+}
+```
+
+## Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `SPEC_KIT_REPO_PATH` | Path to spec-kit repository | Current directory |
+| `GITHUB_TOKEN` | GitHub personal access token | None |
+| `SPEC_KIT_DEFAULT_AI` | Default AI assistant | `claude` |
+| `SPEC_KIT_MAX_CONCURRENT_OPERATIONS` | Max concurrent operations | `5` |
+| `SPEC_KIT_SCRIPT_TIMEOUT` | Script execution timeout (seconds) | `30` |
+| `SPEC_KIT_RESTRICT_TO_REPO` | Restrict operations to repo | `true` |
+| `LOG_LEVEL` | Logging level | `INFO` |
+
+## Development
+
+### Project Structure
+
+```
+spec-kit-mcp/
+├── src/
+│   └── spec_kit_mcp/
+│       ├── __init__.py
+│       ├── __main__.py
+│       ├── server.py           # FastMCP server
+│       ├── config.py           # Configuration
+│       ├── exceptions.py       # Custom exceptions
+│       ├── models.py          # Pydantic models
+│       ├── tools/            # Tool implementations
+│       │   ├── base.py
+│       │   ├── project.py
+│       │   ├── specification.py
+│       │   ├── planning.py
+│       │   ├── tasks.py
+│       │   ├── constitution.py
+│       │   ├── context.py
+│       │   ├── workflow.py
+│       │   └── documentation.py
+│       └── utils/           # Utility modules
+│           ├── git_ops.py
+│           ├── scripts.py
+│           ├── templates.py
+│           ├── github.py
+│           └── validation.py
+├── tests/
+├── Dockerfile
+├── docker-compose.yml
+├── pyproject.toml
+└── README.md
+```
+
+### Running Tests
+
+```bash
+# Install development dependencies
+uv pip install -e ".[dev]"
+
+# Run all tests
+pytest
+
+# Run with coverage
+pytest --cov=spec_kit_mcp --cov-report=html
+
+# Run specific test file
+pytest tests/unit/test_project_tools.py
+
+# Run with verbose output
+pytest -v
+```
+
+### Code Quality
+
+```bash
+# Format code with black
+black src/ tests/
+
+# Lint with ruff
+ruff check src/ tests/
+
+# Type check with mypy
+mypy src/
+```
+
+### Building Docker Image
+
+```bash
+# Build the image
+docker build -t spec-kit-mcp:latest .
+
+# Run the container
+docker run -v $(pwd)/workspace:/workspace \
+           -e GITHUB_TOKEN=$GITHUB_TOKEN \
+           spec-kit-mcp:latest
+
+# Push to registry
+docker tag spec-kit-mcp:latest your-registry/spec-kit-mcp:latest
+docker push your-registry/spec-kit-mcp:latest
+```
+
+## Troubleshooting
+
+### Common Issues
+
+#### 1. GitHub Token Not Working
+
+- Ensure your token has `repo` scope for private repositories
+- Check rate limits: GitHub API has rate limits per token
+
+#### 2. Scripts Not Found
+
+- Ensure spec-kit templates are properly downloaded
+- Check that `.specify/scripts` directory exists
+- Verify scripts have execute permissions
+
+#### 3. Git Operations Failing
+
+- Ensure git is installed in the Docker container or system
+- Check repository permissions
+- Verify you're in a git repository
+
+#### 4. Template Processing Errors
+
+- Check that templates exist in `.specify/templates`
+- Verify Jinja2 syntax in custom templates
+- Check template variables match expected format
+
+### Debug Mode
+
+Enable debug logging for more information:
+
+```bash
+# Set environment variable
+export LOG_LEVEL=DEBUG
+
+# Or in .env file
+LOG_LEVEL=DEBUG
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+### Development Guidelines
+
+- Follow PEP 8 style guide
+- Add type hints to all functions
+- Write tests for new features
+- Update documentation for API changes
+- Ensure all tests pass before submitting PR
+
+## License
+
+MIT License - see [LICENSE](LICENSE) file for details
+
+## Acknowledgments
+
+- [spec-kit](https://github.com/github/spec-kit) - The Spec-Driven Development framework
+- [FastMCP](https://github.com/modelcontextprotocol/python-sdk) - MCP SDK for Python
+- [uv](https://github.com/astral-sh/uv) - Fast Python package manager
+
+## Support
+
+For issues and questions:
+- Open an issue on [GitHub](https://github.com/yourusername/spec-kit-mcp/issues)
+- Check existing issues for solutions
+- Read the [spec-kit documentation](https://github.com/github/spec-kit)
+
+## Roadmap
+
+- [ ] Complete implementation of all tool functionalities
+- [ ] Add comprehensive test coverage (90%+)
+- [ ] Implement caching for better performance
+- [ ] Add WebSocket support for real-time updates
+- [ ] Create web UI for visual management
+- [ ] Add metrics and monitoring
+- [ ] Support for multiple repositories
+- [ ] Integration with CI/CD pipelines
