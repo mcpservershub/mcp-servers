@@ -1,179 +1,106 @@
 name: Build Shadcn-UI MCP Docker Image V2
 
 on:
-  # Trigger on push to the docker directory (where Dockerfile is maintained)
   push:
-    branches:
-      - main
-    paths:
-      - "shadcn-ui-mcp/**"
+    branches: [main]
+    paths: ["shadcn-ui-mcp/**"]
   pull_request:
-    branches:
-      - main
-    paths:
-      - "shadcn-ui-mcp/**"
-  # Trigger on manual dispatch
+    branches: [main]
+    paths: ["shadcn-ui-mcp/**"]
   workflow_dispatch:
-
-  # Schedule to check upstream repository hourly
   schedule:
-    - cron: "0 0 * * 1"
-
-  # Trigger when upstream repository is updated (using repository_dispatch)
+    - cron: "0 0 * * 1" # every Monday at 00:00 UTC
   repository_dispatch:
     types: [upstream-update]
 
 env:
+  PROJECT: shadcn-ui
   UPSTREAM_REPO: Jpisnice/shadcn-ui-mcp-server
-  PROJECT_NAME: shadcn-ui-mcp
+  UPSTREAM_BRANCH: main
   DOCKER_REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}/shadcn-ui-mcp
 
 jobs:
-  check-upstream:
-    runs-on: ubuntu-latest
-    outputs:
-      should_build: ${{ steps.check.outputs.should_build }}
-      upstream_sha: ${{ steps.check.outputs.upstream_sha }}
-      upstream_sha_short: ${{ steps.check.outputs.upstream_sha_short }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Get upstream repository latest commit
-        id: upstream
-        run: |
-          UPSTREAM_SHA=$(curl -s https://api.github.com/repos/${{ env.UPSTREAM_REPO }}/commits/main | jq -r '.sha')
-          echo "sha=$UPSTREAM_SHA" >> $GITHUB_OUTPUT
-          echo "sha_short=${UPSTREAM_SHA:0:7}" >> $GITHUB_OUTPUT
-          echo "Upstream SHA: $UPSTREAM_SHA"
-          echo "Upstream SHA (short): ${UPSTREAM_SHA:0:7}"
-
-      - name: Get last built commit SHA
-        id: last_built
-        run: |
-          # Try to get the last built SHA from a project-specific file
-          SHA_FILE=".github/${{ env.PROJECT_NAME }}-upstream-SHA.txt"
-          if [ -f "$SHA_FILE" ]; then
-            # Extract SHA from the file (skip comments and timestamp)
-            LAST_SHA=$(grep '^SHA:' "$SHA_FILE" | cut -d' ' -f2 || echo "")
-          else
-            LAST_SHA=""
-          fi
-          echo "sha=$LAST_SHA" >> $GITHUB_OUTPUT
-          echo "Last built SHA for ${{ env.PROJECT_NAME }}: $LAST_SHA"
-
-      - name: Check if build is needed
-        id: check
-        run: |
-          # Build if:
-          # 1. This is a manual trigger or push event
-          # 2. Upstream SHA has changed
-          # 3. We've never built before (no last SHA)
-
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]] || \
-             [[ "${{ github.event_name }}" == "push" ]] || \
-             [[ "${{ steps.upstream.outputs.sha }}" != "${{ steps.last_built.outputs.sha }}" ]] || \
-             [[ -z "${{ steps.last_built.outputs.sha }}" ]]; then
-            echo "should_build=true" >> $GITHUB_OUTPUT
-            echo "Build needed: true"
-          else
-            echo "should_build=false" >> $GITHUB_OUTPUT
-            echo "Build needed: false"
-          fi
-          echo "upstream_sha=${{ steps.upstream.outputs.sha }}" >> $GITHUB_OUTPUT
-          echo "upstream_sha_short=${{ steps.upstream.outputs.sha_short }}" >> $GITHUB_OUTPUT
-
-  # Push only on PR merge
-  build-and-push:
-    needs: check-upstream
-    if: needs.check-upstream.outputs.should_build == 'true'
+  build-if-changed:
     runs-on: ubuntu-latest
     permissions:
       contents: write
       packages: write
+
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Checkout repository (this repo)
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Prepare
-        id: prep
+      - name: Check upstream SHA
+        id: check
+        shell: bash
         run: |
-          # Ensure we have a short SHA
-          UPSTREAM_SHA="${{ needs.check-upstream.outputs.upstream_sha }}"
-          UPSTREAM_SHA_SHORT="${{ needs.check-upstream.outputs.upstream_sha_short }}"
+          set -euo pipefail
+          # Get current upstream SHA (tip of the branch)
+          CURRENT_SHA=$(git ls-remote https://github.com/${{ env.UPSTREAM_REPO }}.git refs/heads/${{ env.UPSTREAM_BRANCH }} | cut -f1)
+          echo "current_sha=${CURRENT_SHA}" >> $GITHUB_OUTPUT
 
-          # Fallback if short SHA is empty
-          if [ -z "$UPSTREAM_SHA_SHORT" ]; then
-            UPSTREAM_SHA_SHORT=${UPSTREAM_SHA::7}
-            echo "Using fallback short SHA: $UPSTREAM_SHA_SHORT"
+          # Compare with stored SHA (if present)
+          if [ -f ".github/.${{ env.PROJECT }}-sha" ]; then
+            STORED_SHA=$(cat ".github/.${{ env.PROJECT }}-sha")
+            echo "Stored SHA: ${STORED_SHA}"
+            echo "Current SHA: ${CURRENT_SHA}"
+            if [ "${STORED_SHA}" = "${CURRENT_SHA}" ]; then
+              echo "changed=false" >> $GITHUB_OUTPUT
+              exit 0
+            fi
           fi
+          echo "changed=true" >> $GITHUB_OUTPUT
 
-          # Generate timestamp
-          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+      - name: Checkout upstream repo
+        if: steps.check.outputs.changed == 'true'
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ env.UPSTREAM_REPO }}
+          ref: ${{ env.UPSTREAM_BRANCH }}
+          path: shadcn-ui-mcp-server # <== use this path consistently
 
-          # Output for use in subsequent steps
-          echo "upstream_sha_short=${UPSTREAM_SHA_SHORT}" >> $GITHUB_OUTPUT
-          echo "timestamp=${TIMESTAMP}" >> $GITHUB_OUTPUT
-          echo "build_date=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
-
-      - name: Clone upstream repository
-        run: |
-          git clone https://github.com/${{ env.UPSTREAM_REPO }}.git upstream-source
-          cd upstream-source
-          git checkout ${{ needs.check-upstream.outputs.upstream_sha }}
-
-      - name: Copy Dockerfile to build context
-        run: |
-          cp -v ./shadcn-ui-mcp/Dockerfile ./upstream-source/Dockerfile
-          echo "Copied Dockerfile to upstream-source directory"
+      - name: Copy Dockerfile from this repo into upstream clone
+        if: steps.check.outputs.changed == 'true'
+        run: cp ./shadcn-ui-mcp/Dockerfile ./shadcn-ui-mcp-server/Dockerfile
 
       - name: Set up Docker Buildx
+        if: steps.check.outputs.changed == 'true'
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to GitHub Container Registry
-        if: ${{ github.event_name != 'pull_request' }}
+      - name: Log in to GHCR (skipped on PRs)
+        if: steps.check.outputs.changed == 'true' && github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
           registry: ${{ env.DOCKER_REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
+      - name: Build (and push after merge/schedule/manual)
+        if: steps.check.outputs.changed == 'true'
+        uses: docker/build-push-action@v6
         with:
-          context: ./upstream-source
-          file: ./upstream-source/Dockerfile
-          push: ${{ github.event_name != 'pull_request' }}
+          context: ./shadcn-ui-mcp-server
+          file: ./shadcn-ui-mcp-server/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }} # build on PR, push otherwise
           tags: |
             ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:upstream-${{ steps.prep.outputs.upstream_sha_short }}
-            ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.prep.outputs.upstream_sha_short }}-${{ steps.prep.outputs.timestamp }}
+            ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.check.outputs.current_sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          build-args: |
-            UPSTREAM_SHA=${{ needs.check-upstream.outputs.upstream_sha }}
-            BUILD_DATE=${{ steps.prep.outputs.build_date }}
 
-      - name: Update last built SHA
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+      - name: Update stored SHA (skip on PRs)
+        if: steps.check.outputs.changed == 'true' && github.event_name != 'pull_request'
+        shell: bash
         run: |
-          # Save the SHA and timestamp to the project-specific tracking file
-          SHA_FILE=".github/${{ env.PROJECT_NAME }}-upstream-SHA.txt"
-          echo "# This file tracks the last built upstream commit SHA for ${{ env.PROJECT_NAME }}" > "$SHA_FILE"
-          echo "# Auto-updated by GitHub Actions" >> "$SHA_FILE"
-          echo "" >> "$SHA_FILE"
-          echo "SHA: ${{ needs.check-upstream.outputs.upstream_sha }}" >> "$SHA_FILE"
-          echo "Timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> "$SHA_FILE"
-          echo "Upstream: https://github.com/${{ env.UPSTREAM_REPO }}/commit/${{ needs.check-upstream.outputs.upstream_sha }}" >> "$SHA_FILE"
+          set -euo pipefail
+          echo "${{ steps.check.outputs.current_sha }}" > ".github/.${{ env.PROJECT }}-sha"
 
-          # Configure git
-          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-
-          # Commit and push the change
-          git add "$SHA_FILE"
-          git diff --staged --quiet || (
-            git commit -m "Update ${{ env.PROJECT_NAME }} upstream SHA to ${{ needs.check-upstream.outputs.upstream_sha }}" && 
-            git push
-          )
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add ".github/.${{ env.PROJECT }}-sha"
+          git diff --staged --quiet || git commit -m "Update ${{ env.PROJECT }} SHA to ${{ steps.check.outputs.current_sha }}"
+          git push
