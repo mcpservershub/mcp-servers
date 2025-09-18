@@ -4,57 +4,55 @@ FROM cgr.dev/chainguard/node:latest-dev AS builder
 # Set working directory
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Copy package files with proper ownership
+COPY --chown=node:node package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production && \
+# Install all dependencies (both production and dev)
+RUN npm ci && \
   npm cache clean --force
 
-# Copy TypeScript config and source files
-COPY tsconfig.json ./
-COPY src ./src
-
-# Install dev dependencies for build
-RUN npm install --only=development
+# Copy TypeScript config and source files with proper ownership
+COPY --chown=node:node tsconfig.json ./
+COPY --chown=node:node src ./src
 
 # Build the TypeScript project
 RUN npm run build
 
-# Remove dev dependencies after build
-RUN npm prune --production
+# Remove dev dependencies after build, keeping only production
+RUN npm prune --omit=dev
 
 # Stage 2: Runtime stage using Chainguard Node.js image with shell for entrypoint
 FROM cgr.dev/chainguard/node:latest-dev AS runtime-prep
 
 WORKDIR /app
 
-# Create entrypoint script
+# Create entrypoint script using ES module syntax
 RUN cat > /app/entrypoint.js << 'EOF'
 #!/usr/bin/env node
-const { spawn } = require('child_process');
+import { spawn } from 'child_process';
+import { argv, env, exit } from 'process';
 
 // Build command line arguments based on environment variables
 const args = ['build/index.js'];
 
 // Add framework flag if specified
-if (process.env.FRAMEWORK && process.env.FRAMEWORK !== 'react') {
-args.push('--framework', process.env.FRAMEWORK);
+if (env.FRAMEWORK && env.FRAMEWORK !== 'react') {
+  args.push('--framework', env.FRAMEWORK);
 }
 
 // Add GitHub API key if provided
-if (process.env.GITHUB_API_KEY) {
-args.push('--github-api-key', process.env.GITHUB_API_KEY);
+if (env.GITHUB_API_KEY) {
+  args.push('--github-api-key', env.GITHUB_API_KEY);
 }
 
 // Add any additional arguments passed to the container
-args.push(...process.argv.slice(2));
+args.push(...argv.slice(2));
 
 // Run the MCP server with constructed arguments
 const child = spawn('node', args, { stdio: 'inherit' });
 
 child.on('exit', (code) => {
-process.exit(code);
+  exit(code);
 });
 EOF
 
