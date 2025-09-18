@@ -1,0 +1,30 @@
+{
+  "mcpServers": {
+    "spec-kit": {
+      "command": "python",
+      "args": ["-m", "spec_kit_mcp"],
+      "env": {
+        "SPEC_KIT_REPO_PATH": "${PWD}",
+        "GITHUB_TOKEN": "${GITHUB_TOKEN}",
+        "SPEC_KIT_DEFAULT_AI": "claude",
+        "LOG_LEVEL": "INFO"
+      },
+      "description": "Spec-Kit MCP Server for Spec-Driven Development workflows"
+    }
+  },
+  "dockerConfig": {
+    "spec-kit-docker": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "-v", "${PWD}:/workspace",
+        "-e", "GITHUB_TOKEN=${GITHUB_TOKEN}",
+        "-e", "SPEC_KIT_DEFAULT_AI=claude",
+        "spec-kit-mcp:latest"
+      ],
+      "description": "Spec-Kit MCP Server running in Docker container"
+    }
+  }
+}

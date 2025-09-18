@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  spec-kit-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: spec-kit-mcp:latest
+    container_name: spec-kit-mcp-server
+    volumes:
+      # Mount workspace for spec-kit projects
+      - ./workspace:/workspace
+      # Mount source for development (optional, remove for production)
+      - ./src:/app/src:ro
+      # Mount custom environment file if exists
+      - ./.env:/app/.env:ro
+    environment:
+      - SPEC_KIT_REPO_PATH=/workspace
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - SPEC_KIT_DEFAULT_AI=${SPEC_KIT_DEFAULT_AI:-claude}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    ports:
+      - "8080:8080"
+    networks:
+      - spec-kit-network
+    restart: unless-stopped
+
+  # Optional: MCP Inspector for testing (uncomment when available)
+  # mcp-inspector:
+  #   image: mcp-inspector:latest
+  #   container_name: mcp-inspector
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     - MCP_SERVER_URL=http://spec-kit-mcp:8080
+  #   depends_on:
+  #     - spec-kit-mcp
+  #   networks:
+  #     - spec-kit-network
+
+networks:
+  spec-kit-network:
+    driver: bridge
+
+volumes:
+  workspace:
+    driver: local
