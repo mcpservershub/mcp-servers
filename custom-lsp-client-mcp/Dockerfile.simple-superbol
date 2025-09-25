@@ -1,0 +1,55 @@
+# Simplified Dockerfile for MCP Server with SuperBOL stub
+# This creates a working container with COBOL detection and clear error handling
+
+FROM python:3.12-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    wget \
+    ca-certificates \
+    gnucobol \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /app
+
+# Copy project files
+COPY pyproject.toml ./
+COPY src/ ./src/
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -e .
+
+# Create workspace and cache directories
+RUN mkdir -p /workspace /cache
+
+# Create SuperBOL stub that provides clear error messages
+RUN echo '#!/bin/sh' > /usr/local/bin/superbol && \
+    echo 'echo "SuperBOL LSP Server Stub"' >> /usr/local/bin/superbol && \
+    echo 'echo "Arguments: $@"' >> /usr/local/bin/superbol && \
+    echo 'if [ "$1" = "--version" ]; then' >> /usr/local/bin/superbol && \
+    echo '  echo "SuperBOL stub version 1.0"' >> /usr/local/bin/superbol && \
+    echo '  exit 0' >> /usr/local/bin/superbol && \
+    echo 'elif [ "$1" = "lsp" ]; then' >> /usr/local/bin/superbol && \
+    echo '  echo "SuperBOL LSP mode not implemented - this is a stub"' >> /usr/local/bin/superbol && \
+    echo '  echo "Install real SuperBOL for COBOL language server functionality"' >> /usr/local/bin/superbol && \
+    echo '  exit 1' >> /usr/local/bin/superbol && \
+    echo 'else' >> /usr/local/bin/superbol && \
+    echo '  echo "SuperBOL stub - use --version or lsp"' >> /usr/local/bin/superbol && \
+    echo '  exit 1' >> /usr/local/bin/superbol && \
+    echo 'fi' >> /usr/local/bin/superbol && \
+    chmod +x /usr/local/bin/superbol
+
+# Set environment variables
+ENV WORKSPACE_ROOT=/workspace \
+    MCP_LSP_CACHE_DIR=/cache \
+    PYTHONUNBUFFERED=1 \
+    SUPERBOL_PATH=/usr/local/bin/superbol \
+    PATH="/usr/local/bin:${PATH}"
+
+# Test the stub
+RUN superbol --version
+
+# Default command to run the MCP server
+CMD ["python", "-m", "multilspy_mcp.server"]
