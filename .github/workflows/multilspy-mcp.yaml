@@ -1,16 +1,16 @@
-name: Build & Push custom-lsp-client-mcp Docker Image
+name: Build & Push multilspy-mcp Docker Image
 
 on:
   push:
     branches:
       - main
     paths:
-      - "custom-lsp-client-mcp/**"
+      - "multilspy-mcp/**"
   pull_request:
     branches:
       - main
     paths:
-      - "custom-lsp-client-mcp/**"
+      - "multilspy-mcp/**"
 
 jobs:
   build-and-push:
@@ -20,10 +20,10 @@ jobs:
       packages: write
       id-token: write
     env:
-      PROJECT_NAME: custom-lsp-client-mcp
-      PROJECT_PATH: custom-lsp-client-mcp
+      PROJECT_NAME: multilspy-mcp
+      PROJECT_PATH: multilspy-mcp
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: ${{ github.repository_owner }}/custom-lsp-client-mcp
+      IMAGE_PREFIX: ${{ github.repository_owner }}/multilspy-mcp
 
     steps:
       - name: Checkout repository
