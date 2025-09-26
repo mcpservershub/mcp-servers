@@ -21,11 +21,9 @@ jobs:
       id-token: write
     env:
       PROJECT_NAME: sonarqube-mcp
-      PROJECT_PATH: ${{ env.PROJECT_NAME}}
-      IMAGE_PATH: containers/${{ env.PROJECT_NAME }}-server
+      PROJECT_PATH: sonarqube-mcp
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: ${{ github.repository }}/${{ env.IMAGE_PATH }}
-
+      IMAGE_PREFIX: ${{ github.repository }}/containers/sonarqube-mcp-server
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
