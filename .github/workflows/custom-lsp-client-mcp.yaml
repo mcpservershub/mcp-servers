@@ -5,12 +5,12 @@ on:
     branches:
       - main
     paths:
-      - "custom-lsp-client-mcp/**"
+      - "custom-lsp-client-mcp-server/**"
   pull_request:
     branches:
       - main
     paths:
-      - "custom-lsp-client-mcp/**"
+      - "custom-lsp-client-mcp-server/**"
 
 jobs:
   build-and-push:
@@ -20,10 +20,10 @@ jobs:
       packages: write
       id-token: write
     env:
-      PROJECT_NAME: custom-lsp-client-mcp
-      PROJECT_PATH: custom-lsp-client-mcp
+      PROJECT_NAME: custom-lsp-client-mcp-server
+      PROJECT_PATH: custom-lsp-client-mcp-server
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: ${{ github.repository_owner }}/custom-lsp-client-mcp
+      IMAGE_PREFIX: ${{ github.repository }}/containers/custom-lsp-client-mcp-server
 
     steps:
       - name: Checkout repository

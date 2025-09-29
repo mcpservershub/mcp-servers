@@ -8,17 +8,18 @@ on:
     branches:
       - main
     paths:
-      - "custom-lsp-client-mcp/**"
+      - "custom-lsp-client-mcp-server/**"
   pull_request:
     branches:
       - main
     paths:
-      - "custom-lsp-client-mcp/**"
+      - "custom-lsp-client-mcp-server/**"
   workflow_dispatch:
 
 env:
+  PROJECT_NAME: custom-lsp-client-mcp-server
   REGISTRY: ghcr.io
-  REPOSITORY: ${{ github.repository }}
+  REPOSITORY: ${{ github.repository }}/standaloneocis
 
 jobs:
   build:
@@ -43,8 +44,7 @@ jobs:
 
       - name: Build wheel
         run: uv build --wheel --out-dir dist/
-        working-directory: custom-lsp-client-mcp
-
+        working-directory: ${{ env.PROJECT_NAME }}
       - name: Setup Golang
         uses: actions/setup-go@v6
         with:
@@ -57,11 +57,11 @@ jobs:
       - name: Create simple runner
         run: |
           # Extract package name from wheel
-          WHEEL=$(ls custom-lsp-client-mcp/dist/*.whl | head -1)
+          WHEEL=$(ls ${{ env.PROJECT_NAME }}/dist/*.whl | head -1)
           PACKAGE_NAME=$(basename "$WHEEL" | cut -d'-' -f1 | tr '-' '_')
 
           # Create a simple run script
-          cat > custom-lsp-client-mcp/dist/run.sh << 'EOF'
+          cat > ${{ env.PROJECT_NAME }}/dist/run.sh << 'EOF'
           #!/bin/bash
           # Simple Python package runner
           WHEEL=$(ls "$(dirname "$0")"/*.whl | head -1)
@@ -71,10 +71,10 @@ jobs:
           pip install "$WHEEL" --quiet
           python -m "$PKG" "$@"
           EOF
-          chmod +x custom-lsp-client-mcp/dist/run.sh
+          chmod +x ${{ env.PROJECT_NAME }}/dist/run.sh
 
           # Create metadata
-          echo "{\"package\": \"$PACKAGE_NAME\", \"wheel\": \"$(basename $WHEEL)\"}" > custom-lsp-client-mcp/dist/metadata.json
+          echo "{\"package\": \"$PACKAGE_NAME\", \"wheel\": \"$(basename $WHEEL)\"}" > ${{ env.PROJECT_NAME }}/dist/metadata.json
 
       - name: Push OCI artifact
         id: push
@@ -82,11 +82,11 @@ jobs:
         run: |
           # Push OCI artifact using genval (expects directory, not tar)
           # Use short commit SHA as tag to avoid issues with branch names containing slashes
-          TAG="${GITHUB_SHA::7}"
-          IMAGE_URI="${{ env.REGISTRY }}/${{ env.REPOSITORY }}/custom-lsp-client-mcp:$TAG"
+          TAG="sha-${GITHUB_SHA::7}"
+          IMAGE_URI="${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.PROJECT_NAME }}:$TAG"
 
           # genval expects oci:// prefix for push
-          OUTPUT=$(genval artifact push --reqinput custom-lsp-client-mcp/dist \
+          OUTPUT=$(genval artifact push --reqinput ${{ env.PROJECT_NAME }}/dist \
           --dest "oci://$IMAGE_URI" \
           --annotations="author=capten.ai" 2>&1)
 
@@ -97,7 +97,7 @@ jobs:
 
           echo "✅ Pushed to: $IMAGE_URI"
           echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_OUTPUT
-          echo "IMAGE_DIGEST=${{ env.REGISTRY }}/${{ env.REPOSITORY }}/custom-lsp-client-mcp@$DIGEST" >> $GITHUB_OUTPUT
+          echo "IMAGE_DIGEST=${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.PROJECT_NAME }}@$DIGEST" >> $GITHUB_OUTPUT
 
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3

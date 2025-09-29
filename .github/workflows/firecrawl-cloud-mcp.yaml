@@ -1,16 +1,16 @@
-name: Build & Push dependency-check Docker Image
+name: Build & Push Firecrawl Cloud Hosted MCP Docker Image
 
 on:
   push:
     branches:
       - main
     paths:
-      - "dependency-check-server/**"
+      - "firecrawl-cloud-mcp-server/**"
   pull_request:
     branches:
       - main
     paths:
-      - "dependency-check-server/**"
+      - "firecrawl-cloud-mcp-server/**"
 
 jobs:
   build-and-push:
@@ -20,10 +20,10 @@ jobs:
       packages: write
       id-token: write
     env:
-      PROJECT_NAME: dependency-check-server
-      PROJECT_PATH: dependency-check-server
+      PROJECT_NAME: firecrawl-cloud-mcp-server
+      PROJECT_PATH: firecrawl-cloud-mcp-server
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: ${{ github.repository }}/containers/dependency-check-server
+      IMAGE_PREFIX: ${{ github.repository }}/containers/firecrawl-cloud-mcp-server
 
     steps:
       - name: Checkout repository

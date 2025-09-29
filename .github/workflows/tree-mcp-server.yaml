@@ -5,12 +5,12 @@ on:
     branches:
       - main
     paths:
-      - "taskfile-mcp/**"
+      - "taskfile-mcp-server/**"
   pull_request:
     branches:
       - main
     paths:
-      - "taskfile-mcp/**"
+      - "taskfile-mcp-server/**"
 
 jobs:
   build-and-push:
@@ -23,7 +23,7 @@ jobs:
       PROJECT_NAME: taskfile-mcp
       PROJECT_PATH: taskfile-mcp
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: ${{ github.repository_owner }}/taskfile-mcp
+      IMAGE_PREFIX: ${{ github.repository }}/containers/taskfile-mcp
 
     steps:
       - name: Checkout repository

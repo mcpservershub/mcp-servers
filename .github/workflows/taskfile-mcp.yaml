@@ -20,10 +20,10 @@ jobs:
       packages: write
       id-token: write
     env:
-      PROJECT_NAME: taskfile-mcp
-      PROJECT_PATH: taskfile-mcp
+      PROJECT_NAME: taskfile-mcp-server
+      PROJECT_PATH: taskfile-mcp-server
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: ${{ github.repository_owner }}/tree-mcp-server
+      IMAGE_PREFIX: ${{ github.repository }}/containers/tree-mcp-server
 
     steps:
       - name: Checkout repository

@@ -17,7 +17,7 @@ env:
   PROJECT: shadcn-ui
   UPSTREAM_REPO: Jpisnice/shadcn-ui-mcp-server
   DOCKER_REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/shadcn-ui-mcp
+  IMAGE_NAME: ${{ github.repository }}/shadcn-ui-mcp-server
 
 jobs:
   build-if-changed:

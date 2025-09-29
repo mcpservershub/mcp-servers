@@ -5,12 +5,12 @@ on:
     branches:
       - main
     paths:
-      - "strace-mcp/**"
+      - "strace-mcp-server/**"
   pull_request:
     branches:
       - main
     paths:
-      - "strace-mcp/**"
+      - "strace-mcp-server/**"
 
 jobs:
   build-and-push:
@@ -20,10 +20,10 @@ jobs:
       packages: write
       id-token: write
     env:
-      PROJECT_NAME: strace-mcp
-      PROJECT_PATH: strace-mcp
+      PROJECT_NAME: strace-mcp-server
+      PROJECT_PATH: strace-mcp-server
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: ${{ github.repository_owner }}/strace-mcp
+      IMAGE_PREFIX: ${{ github.repository }}/strace-mcp-server
 
     steps:
       - name: Checkout repository

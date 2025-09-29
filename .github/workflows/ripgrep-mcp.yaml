@@ -5,12 +5,12 @@ on:
     branches:
       - main
     paths:
-      - "ripgrep-mcp/**"
+      - "ripgrep-mcp-server/**"
   pull_request:
     branches:
       - main
     paths:
-      - "ripgrep-mcp/**"
+      - "ripgrep-mcp-server/**"
 
 jobs:
   build-and-push:
@@ -20,10 +20,10 @@ jobs:
       packages: write
       id-token: write
     env:
-      PROJECT_NAME: ripgrep-mcp
-      PROJECT_PATH: ripgrep-mcp
+      PROJECT_NAME: ripgrep-mcp-server
+      PROJECT_PATH: ripgrep-mcp-server
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: ${{ github.repository_owner }}/ripgrep-mcp
+      IMAGE_PREFIX: ${{ github.repository }}/contianers/ripgrep-mcp-server
 
     steps:
       - name: Checkout repository

@@ -5,13 +5,12 @@ on:
     branches:
       - main
     paths:
-      - "neo4j-memory-mcp/**"
+      - "neo4j-memory-mcp-server/**"
   pull_request:
     branches:
       - main
     paths:
-      - "neo4j-memory-mcp/**"
-
+      - "neo4j-memory-mcp-server/**"
 
 jobs:
   build-and-push:
@@ -21,10 +20,10 @@ jobs:
       packages: write
       id-token: write
     env:
-      PROJECT_NAME: neo4j-memory-mcp
-      PROJECT_PATH: neo4j-memory-mcp
+      PROJECT_NAME: neo4j-memory-mcp-server
+      PROJECT_PATH: neo4j-memory-mcp-server
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: ${{ github.repository_owner }}/neo4j-memory-mcp
+      IMAGE_PREFIX: ${{ github.repository }}/containers/neo4j-memory-mcp-server
 
     steps:
       - name: Checkout repository
@@ -68,7 +67,7 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: sigstore/cosign-installer@v3.9.2
         with:
-          cosign-release: 'v2.5.3'
+          cosign-release: "v2.5.3"
 
       - name: Sign the images with GitHub OIDC Token
         if: github.event_name != 'pull_request'

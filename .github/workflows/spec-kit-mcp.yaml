@@ -1,16 +1,16 @@
-name: Build & Push Firecrawl Cloud Hosted MCP Docker Image
+name: Build & Push spec-kit-mcp Docker Image
 
 on:
   push:
     branches:
       - main
     paths:
-      - "firecrawl-cloud-mcp/**"
+      - "spec-kit-mcp-server/**"
   pull_request:
     branches:
       - main
     paths:
-      - "firecrawl-cloud-mcp/**"
+      - "spec-kit-mcp-server/**"
 
 jobs:
   build-and-push:
@@ -20,11 +20,10 @@ jobs:
       packages: write
       id-token: write
     env:
-      PROJECT_NAME: firecrawl-cloud-mcp
-      PROJECT_PATH: firecrawl-cloud-mcp
+      PROJECT_NAME: spec-kit-mcp-server
+      PROJECT_PATH: spec-kit-mcp-server
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: ${{ github.repository_owner }}/firecrawl-cloud-mcp
-
+      IMAGE_PREFIX: ${{ github.repository }}/containers/spec-kit-mcp-server
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -38,7 +37,7 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}
           tags: |
             type=sha,format=short
-        # will generate tags output like "<short SHA>"
+        # will generate tags output with short sha with 7 digit commit sha like "<sha-xxxxxxx>"
 
       - name: Set up QEMU (optional for multi-platform)
         uses: docker/setup-qemu-action@v3

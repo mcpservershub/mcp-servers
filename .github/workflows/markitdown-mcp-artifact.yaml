@@ -1,23 +1,23 @@
 # Simplified Python Package OCI Build
 # Works with ANY Python package that can be run with: python -m package_name
 
-name: Build & Push ast-grep-mcp OCI Artifact
+name: Build & Push markItDown-mcp OCI Artifact
 
 on:
   push:
     branches:
       - main
     paths:
-      - "ast-grep-mcp-server/**"
+      - "markitdown-mcp-server/**"
   pull_request:
     branches:
       - main
     paths:
-      - "ast-grep-mcp-server/**"
+      - "markitdown-mcp-server/**"
   workflow_dispatch:
 
 env:
-  PROJECT_NAME: ast-grep-mcp-server
+  PROJECT_NAME: markitdown-mcp-server
   REGISTRY: ghcr.io
   REPOSITORY: ${{ github.repository }}/standaloneocis
 

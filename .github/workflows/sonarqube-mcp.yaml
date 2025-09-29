@@ -5,12 +5,12 @@ on:
     branches:
       - main
     paths:
-      - "sonarqube-mcp/**"
+      - "sonarqube-mcp-server/**"
   pull_request:
     branches:
       - main
     paths:
-      - "sonarqube-mcp/**"
+      - "sonarqube-mcp-server/**"
 
 jobs:
   build-and-push:
@@ -20,8 +20,8 @@ jobs:
       packages: write
       id-token: write
     env:
-      PROJECT_NAME: sonarqube-mcp
-      PROJECT_PATH: sonarqube-mcp
+      PROJECT_NAME: sonarqube-mcp-server
+      PROJECT_PATH: sonarqube-mcp-server
       REGISTRY: ghcr.io
       IMAGE_PREFIX: ${{ github.repository }}/containers/sonarqube-mcp-server
     steps:

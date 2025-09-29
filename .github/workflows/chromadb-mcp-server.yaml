@@ -1,17 +1,16 @@
-name: Build & Push markItDown-mcp Docker Image
+name: Build & Push ChromaDB-mcp-server Docker Image
 
 on:
   push:
     branches:
       - main
     paths:
-      - "markItDown-mcp/**"
+      - "chromadb-mcp-server/**"
   pull_request:
     branches:
       - main
     paths:
-      - "markItDown-mcp/**"
-
+      - "chromadb-mcp-server/**"
 
 jobs:
   build-and-push:
@@ -21,10 +20,10 @@ jobs:
       packages: write
       id-token: write
     env:
-      PROJECT_NAME: markItDown-mcp
-      PROJECT_PATH: markItDown-mcp
+      PROJECT_NAME: chromadb-mcp-server
+      PROJECT_PATH: chromadb-mcp-server
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: ${{ github.repository_owner }}/markItDown-mcp
+      IMAGE_PREFIX: ${{ github.repository }}/containers/chromadb-mcp-server
 
     steps:
       - name: Checkout repository
@@ -68,7 +67,7 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: sigstore/cosign-installer@v3.9.2
         with:
-          cosign-release: 'v2.5.3'
+          cosign-release: "v2.5.3"
 
       - name: Sign the images with GitHub OIDC Token
         if: github.event_name != 'pull_request'

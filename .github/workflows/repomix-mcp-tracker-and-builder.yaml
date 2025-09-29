@@ -6,12 +6,12 @@ on:
     branches:
       - main
     paths:
-      - "repomix-mcp/**"
+      - "repomix-mcp-server/**"
   pull_request:
     branches:
       - main
     paths:
-      - "repomix-mcp/**"
+      - "repomix-mcp-server/**"
   # Trigger on manual dispatch
   workflow_dispatch:
 
@@ -25,9 +25,9 @@ on:
 
 env:
   UPSTREAM_REPO: yamadashy/repomix
-  PROJECT_NAME: repomix-mcp
+  PROJECT_NAME: repomix-mcp-server
   DOCKER_REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/repomix-mcp
+  IMAGE_NAME: ${{ github.repository }}/containers/repomix-mcp-server
 
 jobs:
   check-upstream:

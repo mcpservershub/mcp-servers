@@ -5,12 +5,12 @@ on:
     branches:
       - main
     paths:
-      - "tree-sitter-graph-mcp/**"
+      - "tree-sitter-graph-mcp-server/**"
   pull_request:
     branches:
       - main
     paths:
-      - "tree-sitter-graph-mcp/**"
+      - "tree-sitter-graph-mcp-server/**"
 
 jobs:
   build-and-push:
@@ -23,7 +23,7 @@ jobs:
       PROJECT_NAME: tree-sitter-graph-mcp
       PROJECT_PATH: tree-sitter-graph-mcp
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: ${{ github.repository_owner }}/tree-sitter-graph-mcp
+      IMAGE_PREFIX: ${{ github.repository }}/conatiners/tree-sitter-graph-mcp-server
 
     steps:
       - name: Checkout repository

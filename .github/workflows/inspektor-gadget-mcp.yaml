@@ -5,12 +5,12 @@ on:
     branches:
       - main
     paths:
-      - "inspektor-gadget-mcp/**"
+      - "inspektor-gadget-mcp-server/**"
   pull_request:
     branches:
       - main
     paths:
-      - "inspektor-gadget-mcp/**"
+      - "inspektor-gadget-mcp-server/**"
 
 jobs:
   build-and-push:
@@ -20,10 +20,10 @@ jobs:
       packages: write
       id-token: write
     env:
-      PROJECT_NAME: inspektor-gadget-mcp
-      PROJECT_PATH: inspektor-gadget-mcp
+      PROJECT_NAME: inspektor-gadget-mcp-server
+      PROJECT_PATH: inspektor-gadget-mcp-server
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: ${{ github.repository_owner }}/inspektor-gadget-mcp
+      IMAGE_PREFIX: ${{ github.repository }}/contianers/inspektor-gadget-mcp-server
 
     steps:
       - name: Checkout repository

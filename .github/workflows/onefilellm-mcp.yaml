@@ -5,12 +5,12 @@ on:
     branches:
       - main
     paths:
-      - "onefilellm-mcp/**"
+      - "onefilellm-mcp-server/**"
   pull_request:
     branches:
       - main
     paths:
-      - "onefilellm-mcp/**"
+      - "onefilellm-mcp-server/**"
 
 jobs:
   build-and-push:
@@ -20,10 +20,10 @@ jobs:
       packages: write
       id-token: write
     env:
-      PROJECT_NAME: onefilellm-mcp
-      PROJECT_PATH: onefilellm-mcp
+      PROJECT_NAME: onefilellm-mcp-server
+      PROJECT_PATH: onefilellm-mcp-server
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: ${{ github.repository_owner }}/onefilellm-mcp
+      IMAGE_PREFIX: ${{ github.repository }}/containers/onefilellm-mcp-server
 
     steps:
       - name: Checkout repository

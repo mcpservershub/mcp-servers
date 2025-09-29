@@ -8,18 +8,19 @@ on:
     branches:
       - main
     paths:
-      - "mise-tasks-mcp/**"
+      - "mise-tasks-mcp-server/**"
   pull_request:
     branches:
       - main
     paths:
-      - "mise-tasks-mcp/**"
+      - "mise-tasks-mcp-server/**"
   workflow_dispatch:
 
 env:
+  PROJECT_NAME: mise-tasks-mcp-server
   REGISTRY: ghcr.io
   REPOSITORY: ${{ github.repository }}
-  IMAGE_NAME: ${{ github.repository_owner }}/mise-tasks-mcp
+  IMAGE_NAME: ${{ github.repository }}/standaloneocis
 
 jobs:
   build:
@@ -44,7 +45,7 @@ jobs:
 
       - name: Build wheel
         run: uv build --wheel --out-dir dist/
-        working-directory: mise-tasks-mcp
+        working-directory: ${{ env.PROJECT_NAME }}
 
       - name: Setup Golang
         uses: actions/setup-go@v6
@@ -58,11 +59,11 @@ jobs:
       - name: Create simple runner
         run: |
           # Extract package name from wheel
-          WHEEL=$(ls mise-tasks-mcp/dist/*.whl | head -1)
+          WHEEL=$(ls ${{ env.PROJECT_NAME }}/dist/*.whl | head -1)
           PACKAGE_NAME=$(basename "$WHEEL" | cut -d'-' -f1 | tr '-' '_')
 
           # Create a simple run script
-          cat > mise-tasks-mcp/dist/run.sh << 'EOF'
+          cat > ${{ env.PROJECT_NAME }}/dist/run.sh << 'EOF'
           #!/bin/bash
           # Simple Python package runner
           WHEEL=$(ls "$(dirname "$0")"/*.whl | head -1)
@@ -72,26 +73,26 @@ jobs:
           pip install "$WHEEL" --quiet
           python -m "$PKG" "$@"
           EOF
-          chmod +x mise-tasks-mcp/dist/run.sh
+          chmod +x ${{ env.PROJECT_NAME }}/dist/run.sh
 
           # Create metadata
-          echo "{\"package\": \"$PACKAGE_NAME\", \"wheel\": \"$(basename $WHEEL)\"}" > mise-tasks-mcp/dist/metadata.json
+          echo "{\"package\": \"$PACKAGE_NAME\", \"wheel\": \"$(basename $WHEEL)\"}" > ${{ env.PROJECT_NAME }}/dist/metadata.json
 
       - name: Push OCI artifact
         id: push
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           # Debug: Check if dist directory exists and list contents
-          echo "Checking mise-tasks-mcp/dist directory:"
-          ls -la mise-tasks-mcp/dist/ || { echo "Error: dist directory not found"; exit 1; }
-          
+          echo "Checking ${{ env.PROJECT_NAME }}/dist directory:"
+          ls -la ${{ env.PROJECT_NAME }}/dist/ || { echo "Error: dist directory not found"; exit 1; }
+
           # Push OCI artifact using genval (expects directory, not tar)
           # Use short commit SHA as tag to avoid issues with branch names containing slashes
-          TAG="${GITHUB_SHA::7}"
-          IMAGE_URI="${{ env.REGISTRY }}/${{ env.REPOSITORY }}/mise-tasks-mcp:$TAG"
+          TAG="sha-${GITHUB_SHA::7}"
+          IMAGE_URI="${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.PROJECT_NAME }}:$TAG"
 
           # genval expects oci:// prefix for push
-          OUTPUT=$(genval artifact push --reqinput mise-tasks-mcp/dist \
+          OUTPUT=$(genval artifact push --reqinput ${{ env.PROJECT_NAME }}/dist \
           --dest "oci://$IMAGE_URI" \
           --annotations="author=capten.ai" 2>&1) || { echo "Genval push failed with exit code: $?"; echo "Output: $OUTPUT"; exit 1; }
 
@@ -102,7 +103,7 @@ jobs:
 
           echo "✅ Pushed to: $IMAGE_URI"
           echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_OUTPUT
-          echo "IMAGE_DIGEST=${{ env.REGISTRY }}/${{ env.REPOSITORY }}/mise-tasks-mcp@$DIGEST" >> $GITHUB_OUTPUT
+          echo "IMAGE_DIGEST=${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.PROJECT_NAME }}@$DIGEST" >> $GITHUB_OUTPUT
 
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3

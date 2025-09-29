@@ -5,12 +5,12 @@ on:
     branches:
       - main
     paths:
-      - "graph-generator-mcp/**"
+      - "graph-generator-mcp-server/**"
   pull_request:
     branches:
       - main
     paths:
-      - "graph-generator-mcp/**"
+      - "graph-generator-mcp-server/**"
 
 jobs:
   build-and-push:
@@ -20,10 +20,10 @@ jobs:
       packages: write
       id-token: write
     env:
-      PROJECT_NAME: graph-generator-mcp
-      PROJECT_PATH: graph-generator-mcp
+      PROJECT_NAME: graph-generator-mcp-server
+      PROJECT_PATH: graph-generator-mcp-server
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: ${{ github.repository_owner }}/graph-generator-mcp
+      IMAGE_PREFIX: ${{ github.repository }}/containers/graph-generator-mcp-server
 
     steps:
       - name: Checkout repository

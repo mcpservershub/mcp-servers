@@ -5,12 +5,12 @@ on:
     branches:
       - main
     paths:
-      - "tree-sitter-mcp/**"
+      - "tree-sitter-mcp-server/**"
   pull_request:
     branches:
       - main
     paths:
-      - "tree-sitter-mcp/**"
+      - "tree-sitter-mcp-server/**"
 
 jobs:
   build-and-push:
@@ -20,10 +20,10 @@ jobs:
       packages: write
       id-token: write
     env:
-      PROJECT_NAME: tree-sitter-mcp
-      PROJECT_PATH: tree-sitter-mcp
+      PROJECT_NAME: tree-sitter-mcp-server
+      PROJECT_PATH: tree-sitter-mcp-server
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: ${{ github.repository_owner }}/tree-sitter-mcp
+      IMAGE_PREFIX: ${{ github.repository }}/containers/tree-sitter-mcp
 
     steps:
       - name: Checkout repository
