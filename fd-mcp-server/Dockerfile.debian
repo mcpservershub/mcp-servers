@@ -1,0 +1,75 @@
+# Multi-stage Dockerfile for fd-mcp-server
+
+# Stage 1: Builder stage
+FROM python:3.12-slim AS builder
+
+# Install fd-find and build dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    fd-find \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create symlink for fd if it's named fdfind
+RUN if [ -f /usr/bin/fdfind ] && [ ! -f /usr/bin/fd ]; then \
+        ln -s /usr/bin/fdfind /usr/bin/fd; \
+    fi
+
+# Install uv for faster dependency management
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.local/bin:$PATH"
+
+# Set working directory
+WORKDIR /app
+
+# Copy project files
+COPY pyproject.toml README.md ./
+COPY src ./src
+
+# Install dependencies using uv
+RUN uv pip install --system --no-cache -e .
+
+# Stage 2: Runtime stage
+FROM python:3.12-slim
+
+# Install fd-find in runtime
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends fd-find && \
+    rm -rf /var/lib/apt/lists/*
+
+# Create symlink for fd if it's named fdfind
+RUN if [ -f /usr/bin/fdfind ] && [ ! -f /usr/bin/fd ]; then \
+        ln -s /usr/bin/fdfind /usr/bin/fd; \
+    fi
+
+# Create non-root user for security
+RUN useradd -m -u 1000 mcp && \
+    mkdir -p /app && \
+    chown -R mcp:mcp /app
+
+# Set working directory
+WORKDIR /app
+
+# Copy installed packages from builder
+COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+
+# Copy application code
+COPY --chown=mcp:mcp src ./src
+
+# Switch to non-root user
+USER mcp
+
+# Set Python path
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+
+# Expose MCP server (stdio-based, no network port)
+# The server communicates via stdin/stdout
+
+# Health check to verify fd is available
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD fd --version || exit 1
+
+# Run the MCP server
+CMD ["python", "-m", "src.fd_mcp_server"]

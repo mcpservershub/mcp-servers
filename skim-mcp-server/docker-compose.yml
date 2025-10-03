@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  skim-mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: skim-mcp-server:latest
+    container_name: skim-mcp-server
+    stdin_open: true  # Keep stdin open for MCP communication
+    tty: true         # Allocate a pseudo-TTY
+    volumes:
+      # Mount workspace directory
+      - ./workspace:/workspace
+      # Mount your actual project directory (adjust path as needed)
+      # - /path/to/your/project:/workspace
+    working_dir: /workspace
+    restart: unless-stopped
+
+    # Environment variables (optional)
+    environment:
+      - TERM=xterm-256color
+      - LC_ALL=C.UTF-8
+      - LANG=C.UTF-8
+
+    # Resource limits (optional)
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 256M
