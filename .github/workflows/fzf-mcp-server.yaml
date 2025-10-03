@@ -21,7 +21,7 @@ jobs:
       id-token: write
     env:
       PROJECT_NAME: fzf-mcp-server
-      PROJECT_PATH: fzf-mcp-sever
+      PROJECT_PATH: fzf-mcp-server
       REGISTRY: ghcr.io
       IMAGE_PREFIX: ${{ github.repository }}/containers/fzf-mcp-server
 

@@ -21,7 +21,7 @@ jobs:
       id-token: write
     env:
       PROJECT_NAME: skim-mcp-server
-      PROJECT_PATH: skim-mcp-sever
+      PROJECT_PATH: skim-mcp-server
       REGISTRY: ghcr.io
       IMAGE_PREFIX: ${{ github.repository }}/containers/skim-mcp-server
 
