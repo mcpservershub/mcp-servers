@@ -1,0 +1,177 @@
+version: '3.8'
+
+# Optimized Docker Compose for AI Agents - Full Headless Mode
+services:
+  # Selenium Hub - Optimized for headless workloads
+  selenium-hub:
+    image: selenium/hub:latest
+    container_name: selenium-hub-headless
+    ports:
+      - "4442:4442"  # Event bus
+      - "4443:4443"  # Publisher
+      - "4444:4444"  # Web interface and Grid registration
+    environment:
+      - GRID_MAX_SESSION=32        # Higher capacity for headless
+      - GRID_BROWSER_TIMEOUT=600   # Longer timeout for AI tasks
+      - GRID_TIMEOUT=600
+      - GRID_SESSION_TIMEOUT=600
+      - JAVA_OPTS=-Xmx2048m        # More memory for hub
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4444/wd/hub/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - selenium-grid
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+
+  # Chrome Node - Optimized for AI Agent headless browsing
+  chrome-headless:
+    image: selenium/node-chrome:latest
+    container_name: selenium-chrome-headless
+    depends_on:
+      selenium-hub:
+        condition: service_healthy
+    environment:
+      - HUB_HOST=selenium-hub
+      - HUB_PORT=4444
+      - NODE_MAX_INSTANCES=12      # More instances for headless
+      - NODE_MAX_SESSION=12
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+      - SE_SCREEN_WIDTH=1920       # Consistent viewport
+      - SE_SCREEN_HEIGHT=1080
+      - SE_NODE_SESSION_TIMEOUT=600 # Longer for AI tasks
+      - START_XVFB=false           # No X server needed for headless
+      - SE_OPTS=--headless         # Force headless mode
+      - JAVA_OPTS=-Xmx3072m        # More memory per node
+    volumes:
+      - /dev/shm:/dev/shm
+    shm_size: 4gb                  # More shared memory for headless
+    networks:
+      - selenium-grid
+    deploy:
+      replicas: 2                  # Multiple replicas for scaling
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.0'
+        reservations:
+          memory: 2G
+        restart_policy:
+          condition: on-failure
+          delay: 10s
+          max_attempts: 3
+
+  # Firefox Node - Headless optimized
+  firefox-headless:
+    image: selenium/node-firefox:latest
+    container_name: selenium-firefox-headless
+    depends_on:
+      selenium-hub:
+        condition: service_healthy
+    environment:
+      - HUB_HOST=selenium-hub
+      - HUB_PORT=4444
+      - NODE_MAX_INSTANCES=10
+      - NODE_MAX_SESSION=10
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+      - SE_SCREEN_WIDTH=1920
+      - SE_SCREEN_HEIGHT=1080
+      - SE_NODE_SESSION_TIMEOUT=600
+      - START_XVFB=false
+      - JAVA_OPTS=-Xmx2048m
+    volumes:
+      - /dev/shm:/dev/shm
+    shm_size: 4gb
+    networks:
+      - selenium-grid
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          memory: 3G
+          cpus: '1.5'
+        reservations:
+          memory: 1G
+
+  # Selenium MCP Server - AI Agent optimized
+  selenium-mcp-ai:
+    build:
+      context: .
+      dockerfile: Dockerfile.cgr
+      target: runtime
+    container_name: selenium-mcp-ai
+    depends_on:
+      selenium-hub:
+        condition: service_healthy
+      chrome-headless:
+        condition: service_started
+      firefox-headless:
+        condition: service_started
+    environment:
+      - SELENIUM_GRID_HOST=selenium-hub
+      - SELENIUM_GRID_PORT=4444
+      - SELENIUM_GRID_URL=http://selenium-hub:4444/wd/hub
+      - PYTHONPATH=/app/src
+      - LOG_LEVEL=INFO
+      - DEFAULT_HEADLESS=true      # Force headless by default
+      - AI_AGENT_MODE=true         # Enable AI optimizations
+      - MAX_CONCURRENT_SESSIONS=8  # Limit concurrent sessions
+    volumes:
+      - ./screenshots:/home/selenium/screenshots
+      - ./downloads:/home/selenium/downloads
+      - ./logs:/app/logs
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+    networks:
+      - selenium-grid
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "python", "-c", "import selenium_mcp; print('OK')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Optional: Monitoring and metrics
+  selenium-metrics:
+    image: selenium/standalone-chrome:latest
+    container_name: selenium-metrics
+    environment:
+      - SE_ENABLE_TRACING=true
+      - SE_GRID_URL=http://selenium-hub:4444
+    networks:
+      - selenium-grid
+    profiles: ["monitoring"]
+
+networks:
+  selenium-grid:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  screenshots:
+    driver: local
+  downloads:
+    driver: local
+  logs:
+    driver: local

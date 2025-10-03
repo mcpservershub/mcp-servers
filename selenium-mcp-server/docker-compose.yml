@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  selenium-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: selenium-mcp-server
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ./screenshots:/home/selenium/screenshots
+      - ./downloads:/home/selenium/Downloads
+    environment:
+      - DISPLAY=${DISPLAY:-:99}
+      - PYTHONPATH=/app/src
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+    shm_size: 2gb  # Increased shared memory for Chrome
+    security_opt:
+      - seccomp:unconfined  # Required for some Chrome features
+    cap_add:
+      - SYS_ADMIN  # Required for Chrome sandbox
+
+  # Development service with hot reload
+  selenium-mcp-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: selenium-mcp-dev
+    volumes:
+      - .:/app
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ./screenshots:/home/selenium/screenshots
+      - ./downloads:/home/selenium/Downloads
+    environment:
+      - DISPLAY=${DISPLAY:-:99}
+      - PYTHONPATH=/app/src
+    stdin_open: true
+    tty: true
+    shm_size: 2gb
+    security_opt:
+      - seccomp:unconfined
+    cap_add:
+      - SYS_ADMIN
+    command: ["python", "-m", "selenium_mcp.server", "--log-level", "DEBUG"]
+
+  # X11 server for headful testing (optional)
+  xvfb:
+    image: selenium/standalone-chrome:latest
+    container_name: selenium-xvfb
+    ports:
+      - "4444:4444"
+      - "5900:5900"  # VNC port
+    environment:
+      - SE_VNC_NO_PASSWORD=1
+    shm_size: 2gb

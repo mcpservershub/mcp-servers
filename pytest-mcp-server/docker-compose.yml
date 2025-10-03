@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  pytest-mcp-server:
+    image: pytest-mcp-server:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    environment:
+      - PYTEST_MCP_DB_PATH=/app/data/pytest_mcp.db
+      - PYTEST_MCP_LOG_LEVEL=INFO
+    volumes:
+      - pytest_mcp_data:/app/data
+    stdin_open: true  # Keep STDIN open for MCP protocol
+    tty: false        # No TTY needed for STDIO
+
+  pytest-mcp-dev:
+    image: pytest-mcp-server:dev
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    environment:
+      - PYTEST_MCP_DB_PATH=/app/data/pytest_mcp.db
+      - PYTEST_MCP_LOG_LEVEL=DEBUG
+    volumes:
+      - pytest_mcp_data:/app/data
+      - .:/app/src:ro  # Mount source code for development
+    stdin_open: true
+    tty: false
+    profiles:
+      - dev
+
+volumes:
+  pytest_mcp_data:
+    driver: local

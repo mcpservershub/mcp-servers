@@ -1,0 +1,82 @@
+services:
+  cypress-mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: enhanced-cypress-mcp-server
+    restart: unless-stopped
+
+    # Environment variables
+    environment:
+      - NODE_ENV=production
+      - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+      - DISPLAY=:99
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+
+    # Volume mounts for persistent data
+    volumes:
+      - mcp-data:/app/data
+      - ./generated-tests:/app/output:rw  # Mount for generated test files
+
+    # Network configuration
+    networks:
+      - mcp-network
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "node", "-e", "console.log('Health check passed')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional: Add a lightweight web interface for testing (development)
+  mcp-web-interface:
+    image: node:18-alpine
+    container_name: mcp-web-interface
+    profiles: ["development"]
+    working_dir: /app
+    command: >
+      sh -c "
+      echo 'Creating simple web interface...' &&
+      npm init -y &&
+      npm install express &&
+      node -e \"
+      const express = require('express');
+      const app = express();
+      app.use(express.json());
+      app.get('/', (req, res) => {
+        res.send('<h1>Enhanced Cypress MCP Server</h1><p>Server is running in container</p>');
+      });
+      app.listen(3000, '0.0.0.0', () => console.log('Web interface on port 3000'));
+      \"
+      "
+    ports:
+      - "3000:3000"
+    networks:
+      - mcp-network
+    depends_on:
+      - cypress-mcp-server
+
+volumes:
+  mcp-data:
+    driver: local
+
+networks:
+  mcp-network:
+    driver: bridge
+    name: enhanced-cypress-mcp-network

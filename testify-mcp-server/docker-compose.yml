@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  testify-mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: testify-mcp-server
+    volumes:
+      - ./workspace:/workspace:rw
+      - ./data:/app/data:rw
+    environment:
+      - WORK_DIR=/workspace
+      - DATA_DIR=/app/data
+    # Note: stdio transport only, no HTTP port needed
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
+    networks:
+      - mcp-network
+
+networks:
+  mcp-network:
+    driver: bridge
+
+volumes:
+  workspace:
+    driver: local
+  data:
+    driver: local

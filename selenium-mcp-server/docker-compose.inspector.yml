@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  # Selenium Hub
+  selenium-hub:
+    image: selenium/hub:latest
+    container_name: selenium-hub-inspector
+    ports:
+      - "4444:4444"
+    environment:
+      - GRID_MAX_SESSION=16
+      - GRID_BROWSER_TIMEOUT=300
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4444/wd/hub/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - selenium-network
+
+  # Chrome Node
+  chrome:
+    image: selenium/node-chrome:latest
+    container_name: selenium-chrome-inspector
+    depends_on:
+      selenium-hub:
+        condition: service_healthy
+    environment:
+      - HUB_HOST=selenium-hub
+      - HUB_PORT=4444
+      - NODE_MAX_INSTANCES=8
+      - NODE_MAX_SESSION=8
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+    volumes:
+      - /dev/shm:/dev/shm
+    shm_size: 2gb
+    networks:
+      - selenium-network
+
+  # MCP Server that can be used with inspector
+  selenium-mcp-inspector:
+    build:
+      context: .
+      dockerfile: Dockerfile.cgr
+      target: runtime
+    container_name: selenium-mcp-inspector
+    depends_on:
+      selenium-hub:
+        condition: service_healthy
+    environment:
+      - SELENIUM_GRID_HOST=selenium-hub
+      - SELENIUM_GRID_PORT=4444
+      - SELENIUM_GRID_URL=http://selenium-hub:4444/wd/hub
+      - PYTHONPATH=/app/src
+    volumes:
+      - ${PWD}:/workspace
+      - ./screenshots:/home/selenium/screenshots
+    stdin_open: true
+    tty: true
+    networks:
+      - selenium-network
+
+networks:
+  selenium-network:
+    driver: bridge
