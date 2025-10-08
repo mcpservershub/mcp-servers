@@ -1,5 +1,5 @@
 # Build stage
-FROM golang:1.24-alpine AS builder
+FROM cgr.dev/chainguard/go:latest-dev AS builder
 
 # Install git and build dependencies
 RUN apk add --no-cache git ca-certificates tzdata
@@ -22,10 +22,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build \
   ./cmd/testify-mcp-server
 
 # Final stage - use golang:alpine to have Go toolchain available for running tests
-FROM cgr.dev/chainguard/go:latest-dev
+FROM cgr.dev/chainguard/go:latest
 
-# Install runtime dependencies
-RUN apk add --no-cache ca-certificates tzdata git
 
 # Copy the binary from builder stage
 COPY --from=builder /build/testify-mcp-server /app/testify-mcp-server
