@@ -76,7 +76,7 @@ jobs:
 
       - name: Copy Dockerfile from this repo into upstream clone
         if: steps.check.outputs.changed == 'true'
-        run: cp ./${{ env.Project }}/Dockerfile ./${{ env.TEMP_DIR }}/Dockerfile
+        run: cp ./${{ env.PROJECT }}/Dockerfile ./${{ env.TEMP_DIR }}/Dockerfile
 
       - name: Set up Docker Buildx
         if: steps.check.outputs.changed == 'true'

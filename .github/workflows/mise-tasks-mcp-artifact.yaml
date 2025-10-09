@@ -19,8 +19,7 @@ on:
 env:
   PROJECT_NAME: mise-tasks-mcp-server
   REGISTRY: ghcr.io
-  REPOSITORY: ${{ github.repository }}
-  IMAGE_NAME: ${{ github.repository }}/standaloneocis
+  REPOSITORY: ${{ github.repository }}/standaloneocis
 
 jobs:
   build:

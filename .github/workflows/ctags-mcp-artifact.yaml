@@ -58,11 +58,11 @@ jobs:
       - name: Create simple runner
         run: |
           # Extract package name from wheel
-          WHEEL=$(ls ${{ env.PROJECT_NAME}}/dist/*.whl | head -1)
+          WHEEL=$(ls ${{ env.PROJECT_NAME }}/dist/*.whl | head -1)
           PACKAGE_NAME=$(basename "$WHEEL" | cut -d'-' -f1 | tr '-' '_')
 
           # Create a simple run script
-          cat > ${{ env.PROJECT_NAME}}/dist/run.sh << 'EOF'
+          cat > ${{ env.PROJECT_NAME }}/dist/run.sh << 'EOF'
           #!/bin/bash
           # Simple Python package runner
           WHEEL=$(ls "$(dirname "$0")"/*.whl | head -1)
@@ -72,10 +72,10 @@ jobs:
           pip install "$WHEEL" --quiet
           python -m "$PKG" "$@"
           EOF
-          chmod +x ${{ env.PROJECT_NAME}}/dist/run.sh
+          chmod +x ${{ env.PROJECT_NAME }}/dist/run.sh
 
           # Create metadata
-          echo "{\"package\": \"$PACKAGE_NAME\", \"wheel\": \"$(basename $WHEEL)\"}" > ${{ env.PROJECT_NAME}}/dist/metadata.json
+          echo "{\"package\": \"$PACKAGE_NAME\", \"wheel\": \"$(basename $WHEEL)\"}" > ${{ env.PROJECT_NAME }}/dist/metadata.json
 
       - name: Push OCI artifact
         id: push
@@ -84,10 +84,10 @@ jobs:
           # Push OCI artifact using genval (expects directory, not tar)
           # Use short commit SHA as tag to avoid issues with branch names containing slashes
           TAG="sha-${GITHUB_SHA::7}"
-          IMAGE_URI="${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.PROJECT_NAME}}:$TAG"
+          IMAGE_URI="${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.PROJECT_NAME }}:$TAG"
 
           # genval expects oci:// prefix for push
-          OUTPUT=$(genval artifact push --reqinput ${{ env.PROJECT_NAME}}/dist \
+          OUTPUT=$(genval artifact push --reqinput ${{ env.PROJECT_NAME }}/dist \
           --dest "oci://$IMAGE_URI" \
           --annotations="author=capten.ai" 2>&1)
 
@@ -98,7 +98,7 @@ jobs:
 
           echo "✅ Pushed to: $IMAGE_URI"
           echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_OUTPUT
-          echo "IMAGE_DIGEST=${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.PROJECT_NAME}}@$DIGEST" >> $GITHUB_OUTPUT
+          echo "IMAGE_DIGEST=${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.PROJECT_NAME }}@$DIGEST" >> $GITHUB_OUTPUT
 
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3
