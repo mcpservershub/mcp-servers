@@ -1,0 +1,116 @@
+name: Build Neo4j-memory-upstream MCP Docker Image V2
+
+on:
+  push:
+    branches: [main]
+    paths: ["neo4j-memory-mcp-server-upstream/**"]
+  pull_request:
+    branches: [main]
+    paths: ["neo4j-memory-mcp-server-upstream/**"]
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * 1" # every Monday at 00:00 UTC
+  repository_dispatch:
+    types: [upstream-update]
+
+env:
+  PROJECT: neo4j-memory-mcp-server-upstream
+  TEMP_DIR: neo4j-memory-mcp-server
+  UPSTREAM_REPO: neo4j-contrib/mcp-neo4j/servers/mcp-neo4j-memory
+  DOCKER_REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/neo4j-memory-mcp-server-upstream
+
+jobs:
+  build-if-changed:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - name: Checkout repository (this repo)
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Detect upstream default branch
+        id: branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Get default branch name (master/main/…)
+          DEF=$(git ls-remote --symref https://github.com/${{ env.UPSTREAM_REPO }}.git HEAD \
+                | awk '/^ref:/ {print $2}' | sed 's|refs/heads/||')
+          echo "name=$DEF" >> "$GITHUB_OUTPUT"
+          echo "Upstream default branch: $DEF"
+
+      - name: Check upstream SHA
+        id: check
+        shell: bash
+        run: |
+          set -euo pipefail
+          BR="${{ steps.branch.outputs.name }}"
+          CURRENT_SHA=$(git ls-remote https://github.com/${{ env.UPSTREAM_REPO }}.git "refs/heads/${BR}" | cut -f1)
+          echo "current_sha=${CURRENT_SHA}" >> $GITHUB_OUTPUT
+          echo "branch=${BR}" >> $GITHUB_OUTPUT
+
+          if [ -f ".github/.${{ env.PROJECT }}-sha" ]; then
+            STORED_SHA=$(cat ".github/.${{ env.PROJECT }}-sha")
+            echo "Stored SHA: ${STORED_SHA}"
+            echo "Current SHA: ${CURRENT_SHA}"
+            if [ "${STORED_SHA}" = "${CURRENT_SHA}" ]; then
+              echo "changed=false" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+          fi
+          echo "changed=true" >> $GITHUB_OUTPUT
+
+      - name: Checkout upstream repo
+        if: steps.check.outputs.changed == 'true'
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ env.UPSTREAM_REPO }}
+          ref: ${{ steps.check.outputs.branch }}
+          path: ${{ env.TEMP_DIR }}
+
+      - name: Copy Dockerfile from this repo into upstream clone
+        if: steps.check.outputs.changed == 'true'
+        run: cp ./${{ env.Project }}/Dockerfile ./${{ env.TEMP_DIR }}/Dockerfile
+
+      - name: Set up Docker Buildx
+        if: steps.check.outputs.changed == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR (skip on PRs)
+        if: steps.check.outputs.changed == 'true' && github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.DOCKER_REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build (push only when not PR)
+        if: steps.check.outputs.changed == 'true'
+        uses: docker/build-push-action@v6
+        with:
+          context: ./${{ env.TEMP_DIR }}
+          file: ./${{ env.TEMP_DIR }}/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.check.outputs.current_sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Update stored SHA (skip on PRs)
+        if: steps.check.outputs.changed == 'true' && github.event_name != 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "${{ steps.check.outputs.current_sha }}" > ".github/.${{ env.PROJECT }}-sha"
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add ".github/.${{ env.PROJECT }}-sha"
+          git diff --staged --quiet || git commit -m "Update ${{ env.PROJECT }} SHA to ${{ steps.check.outputs.current_sha }}"
+          git push

@@ -21,7 +21,7 @@ jobs:
       id-token: write
     env:
       PROJECT_NAME: ast-grep-mcp-server
-      PROJECT_PATH: ast-grep-mcp-sever
+      PROJECT_PATH: ast-grep-mcp-server
       REGISTRY: ghcr.io
       IMAGE_PREFIX: ${{ github.repository }}/containers/ast-grep-mcp-server
 
