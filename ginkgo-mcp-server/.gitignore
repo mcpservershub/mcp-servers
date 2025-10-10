@@ -1,5 +1,5 @@
 # Binaries
-ginkgo-mcp-server
+/ginkgo-mcp-server
 *.exe
 *.dll
 *.so

@@ -13,9 +13,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 # Copy the entire source tree
-COPY cmd/ ./cmd/
-COPY internal/ ./internal/
-COPY pkg/ ./pkg/
+COPY . .
 
 # Build the application (CGO_ENABLED=0 for static binary)
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
