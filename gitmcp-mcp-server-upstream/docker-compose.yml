@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  git-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+    container_name: git-mcp
+    ports:
+      - "8787:8787"
+    environment:
+      - NODE_ENV=production
+      # Add your environment variables here
+      # - OPENAI_API_KEY=${OPENAI_API_KEY}
+      # - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      # - XAI_API_KEY=${XAI_API_KEY}
+    restart: unless-stopped
+    volumes:
+      # Mount local .env file if needed
+      # - ./.env:/app/.env:ro
+      # Mount wrangler config for local development
+      - ./wrangler.jsonc:/app/wrangler.jsonc:ro
+    networks:
+      - git-mcp-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8787/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  git-mcp-network:
+    driver: bridge

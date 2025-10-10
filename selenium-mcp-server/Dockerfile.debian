@@ -1,0 +1,137 @@
+# Multi-stage Dockerfile for Selenium MCP Server
+
+# Build stage
+FROM python:3.12-slim as builder
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    make \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv for fast dependency management
+RUN pip install uv
+
+# Set working directory
+WORKDIR /app
+
+# Copy dependency files
+COPY pyproject.toml ./
+
+# Create virtual environment and install dependencies
+RUN uv venv /opt/venv
+ENV VIRTUAL_ENV=/opt/venv
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+# Install Python dependencies
+RUN uv pip install -e .
+
+# Runtime stage
+FROM python:3.12-slim as runtime
+
+# Install system dependencies for browsers
+RUN apt-get update && apt-get install -y \
+    wget \
+    gnupg \
+    ca-certificates \
+    fonts-liberation \
+    libasound2 \
+    libatk-bridge2.0-0 \
+    libatk1.0-0 \
+    libatspi2.0-0 \
+    libcups2 \
+    libdrm2 \
+    libgtk-3-0 \
+    libnspr4 \
+    libnss3 \
+    libx11-6 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxext6 \
+    libxfixes3 \
+    libxrandr2 \
+    libxss1 \
+    libxtst6 \
+    xdg-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Google Chrome
+RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
+    && echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list \
+    && apt-get update \
+    && apt-get install -y google-chrome-stable \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Firefox
+RUN wget -q -O - https://packages.mozilla.org/apt/repo-signing-key.gpg | apt-key add - \
+    && echo "deb [arch=amd64] https://packages.mozilla.org/apt mozilla main" >> /etc/apt/sources.list.d/mozilla.list \
+    && apt-get update \
+    && apt-get install -y firefox \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Microsoft Edge
+RUN curl https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > microsoft.gpg \
+    && install -o root -g root -m 644 microsoft.gpg /etc/apt/trusted.gpg.d/ \
+    && echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/trusted.gpg.d/microsoft.gpg] https://packages.microsoft.com/repos/edge stable main" > /etc/apt/sources.list.d/microsoft-edge-dev.list \
+    && apt-get update \
+    && apt-get install -y microsoft-edge-stable \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy virtual environment from builder stage
+COPY --from=builder /opt/venv /opt/venv
+ENV VIRTUAL_ENV=/opt/venv
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+# Create non-root user for security
+RUN groupadd -r selenium && useradd -r -g selenium -G audio,video selenium \
+    && mkdir -p /home/selenium/Downloads /app \
+    && chown -R selenium:selenium /home/selenium /app
+
+# Set working directory
+WORKDIR /app
+
+# Copy application code
+COPY --chown=selenium:selenium src/ ./src/
+COPY --chown=selenium:selenium pyproject.toml ./
+
+# Switch to non-root user
+USER selenium
+
+# Set environment variables
+ENV PYTHONPATH="/app/src:$PYTHONPATH"
+ENV DISPLAY=:99
+ENV CHROME_BIN=/usr/bin/google-chrome
+ENV FIREFOX_BIN=/usr/bin/firefox
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD python -c "import selenium_mcp; print('OK')" || exit 1
+
+# Expose MCP server (stdio mode - no port needed)
+# The server communicates via stdin/stdout
+
+# Default command
+CMD ["python", "-m", "selenium_mcp.server"]
+
+# Development stage (optional)
+FROM runtime as development
+
+USER root
+
+# Install development tools
+RUN apt-get update && apt-get install -y \
+    git \
+    vim \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install development Python dependencies
+COPY --from=builder /opt/venv /opt/venv
+RUN /opt/venv/bin/uv pip install pytest pytest-asyncio pytest-mock black isort mypy ruff
+
+USER selenium
+
+# Development command with auto-reload
+CMD ["python", "-m", "selenium_mcp.server", "--log-level", "DEBUG"]

@@ -1,0 +1,62 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build outputs
+dist
+.react-router
+build
+
+# Git
+.git
+.gitignore
+.github
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage
+.nyc_output
+tests
+playwright-report
+test-results
+
+# Logs
+logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Documentation
+README.md
+LICENSE
+SECURITY.md
+*.md
+!package.json
+
+# CI/CD
+.husky
+.github
+
+# Other
+.prettierrc
+biome.json
+playwright.config.ts
+vitest.config.ts
+img

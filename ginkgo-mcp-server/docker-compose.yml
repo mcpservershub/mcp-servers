@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  ginkgo-mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ginkgo-mcp-server
+    stdin_open: true
+    tty: true
+    volumes:
+      # Mount your Go project directory
+      - ./test-project:/workspace:rw
+      # Persistent data storage
+      - ginkgo-mcp-data:/app/data:rw
+      # Optional: Mount Go module cache for faster builds
+      - go-mod-cache:/go/pkg/mod:rw
+    environment:
+      - GO111MODULE=on
+      - GOPROXY=https://proxy.golang.org,direct
+    working_dir: /workspace
+    command: ["-work-dir", "/workspace", "-data-dir", "/app/data", "-debug"]
+    restart: unless-stopped
+
+volumes:
+  ginkgo-mcp-data:
+    driver: local
+  go-mod-cache:
+    driver: local

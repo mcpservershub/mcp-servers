@@ -1,0 +1,190 @@
+version: '3.8'
+
+services:
+  # Selenium Hub - Central point for Selenium Grid
+  selenium-hub:
+    image: selenium/hub:latest
+    container_name: selenium-hub
+    ports:
+      - "4442:4442"  # Event bus
+      - "4443:4443"  # Publisher
+      - "4444:4444"  # Web interface and Grid registration
+    environment:
+      - GRID_MAX_SESSION=16
+      - GRID_BROWSER_TIMEOUT=300
+      - GRID_TIMEOUT=300
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4444/wd/hub/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - selenium-grid
+
+  # Chrome Node - Runs Chrome browsers
+  chrome:
+    image: selenium/node-chrome:latest
+    container_name: selenium-chrome
+    depends_on:
+      selenium-hub:
+        condition: service_healthy
+    environment:
+      - HUB_HOST=selenium-hub
+      - HUB_PORT=4444
+      - NODE_MAX_INSTANCES=8  # Increased for headless efficiency
+      - NODE_MAX_SESSION=8
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+      - SE_VNC_NO_PASSWORD=1  # For debugging (optional)
+      - SE_SCREEN_WIDTH=1920   # Default screen size for headless
+      - SE_SCREEN_HEIGHT=1080
+      - SE_NODE_SESSION_TIMEOUT=300  # Session timeout
+    ports:
+      - "5900:5900"  # VNC port for Chrome debugging
+    volumes:
+      - /dev/shm:/dev/shm
+    shm_size: 2gb
+    networks:
+      - selenium-grid
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          memory: 3G    # Increased for multiple headless sessions
+          cpus: '1.5'
+        reservations:
+          memory: 1G
+
+  # Firefox Node - Runs Firefox browsers
+  firefox:
+    image: selenium/node-firefox:latest
+    container_name: selenium-firefox
+    depends_on:
+      selenium-hub:
+        condition: service_healthy
+    environment:
+      - HUB_HOST=selenium-hub
+      - HUB_PORT=4444
+      - NODE_MAX_INSTANCES=4
+      - NODE_MAX_SESSION=4
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+      - SE_VNC_NO_PASSWORD=1  # For debugging (optional)
+    ports:
+      - "5901:5900"  # VNC port for Firefox debugging
+    volumes:
+      - /dev/shm:/dev/shm
+    shm_size: 2gb
+    networks:
+      - selenium-grid
+    deploy:
+      replicas: 1
+
+  # Edge Node - Runs Edge browsers
+  edge:
+    image: selenium/node-edge:latest
+    container_name: selenium-edge
+    depends_on:
+      selenium-hub:
+        condition: service_healthy
+    environment:
+      - HUB_HOST=selenium-hub
+      - HUB_PORT=4444
+      - NODE_MAX_INSTANCES=4
+      - NODE_MAX_SESSION=4
+      - SE_EVENT_BUS_HOST=selenium-hub
+      - SE_EVENT_BUS_PUBLISH_PORT=4442
+      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+      - SE_VNC_NO_PASSWORD=1  # For debugging (optional)
+    ports:
+      - "5902:5900"  # VNC port for Edge debugging
+    volumes:
+      - /dev/shm:/dev/shm
+    shm_size: 2gb
+    networks:
+      - selenium-grid
+    deploy:
+      replicas: 1
+
+  # Selenium MCP Server - Your application using Chainguard images
+  selenium-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile.cgr
+      target: runtime
+    container_name: selenium-mcp-server
+    depends_on:
+      selenium-hub:
+        condition: service_healthy
+      chrome:
+        condition: service_started
+      firefox:
+        condition: service_started
+      edge:
+        condition: service_started
+    environment:
+      - SELENIUM_GRID_HOST=selenium-hub
+      - SELENIUM_GRID_PORT=4444
+      - SELENIUM_GRID_URL=http://selenium-hub:4444/wd/hub
+      - PYTHONPATH=/app/src
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./screenshots:/home/selenium/screenshots
+      - ./downloads:/home/selenium/downloads
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+    networks:
+      - selenium-grid
+    healthcheck:
+      test: ["CMD", "python", "-c", "import selenium_mcp; print('OK')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Development version with hot reload
+  selenium-mcp-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.cgr
+      target: development
+    container_name: selenium-mcp-dev
+    depends_on:
+      selenium-hub:
+        condition: service_healthy
+    environment:
+      - SELENIUM_GRID_HOST=selenium-hub
+      - SELENIUM_GRID_PORT=4444
+      - SELENIUM_GRID_URL=http://selenium-hub:4444/wd/hub
+      - PYTHONPATH=/app/src
+      - LOG_LEVEL=DEBUG
+    volumes:
+      - .:/app  # Mount source for hot reload
+      - ./screenshots:/home/selenium/screenshots
+      - ./downloads:/home/selenium/downloads
+    stdin_open: true
+    tty: true
+    networks:
+      - selenium-grid
+    profiles: ["dev"]  # Only start with --profile dev
+
+  # Selenium Grid UI (optional)
+  selenium-ui:
+    image: selenium/standalone-chrome:latest
+    container_name: selenium-ui
+    ports:
+      - "7900:7900"  # VNC web interface
+    environment:
+      - SE_VNC_NO_PASSWORD=1
+      - SE_VNC_PORT=5900
+    profiles: ["ui"]  # Only start with --profile ui
+
+networks:
+  selenium-grid:
+    driver: bridge
+
+volumes:
+  screenshots:
+  downloads:

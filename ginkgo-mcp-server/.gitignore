@@ -1,0 +1,51 @@
+# Binaries
+/ginkgo-mcp-server
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+
+# Go build artifacts
+vendor/
+*.out
+*.prof
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.cover
+*.coverprofile
+coverage.out
+coverage.html
+
+# Dependency directories
+.vendor-new/
+
+# Go workspace file
+go.work
+
+# Data directories
+data/
+*.json
+!go.sum
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+
+# Docker
+.dockerignore

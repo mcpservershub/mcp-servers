@@ -1,0 +1,50 @@
+# Single-stage Dockerfile using Chainguard Node.js image
+# Chainguard images are minimal, secure, and glibc-based (required for workerd)
+FROM cgr.dev/chainguard/node:latest-dev
+
+# Switch to root to install dependencies and build
+USER root
+
+# Install pnpm globally
+RUN npm install -g pnpm@10.7.1
+
+# Set working directory
+WORKDIR /app
+
+# Set NODE_ENV to production
+ENV NODE_ENV=production
+
+# Copy package files
+COPY --chown=node:node package.json pnpm-lock.yaml ./
+
+# Install dependencies
+RUN pnpm install --frozen-lockfile
+
+# Copy application source and configuration files
+COPY --chown=node:node . .
+
+# Build the application
+RUN pnpm run build
+
+# Create writable directories for wrangler temp files
+RUN mkdir -p /app/.wrangler /app/node_modules/.mf && \
+    chown -R node:node /app/.wrangler /app/node_modules/.mf
+
+# Switch to non-root user (Chainguard uses 'node' user by default)
+USER node
+
+# Expose port (Wrangler dev server typically runs on 8787)
+EXPOSE 8787
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:8787/ || exit 1
+
+# Override the default Chainguard entrypoint
+ENTRYPOINT []
+
+# Start the application using wrangler with proper flags for Docker/MCP
+# --ip 0.0.0.0: Bind to all interfaces (required for Docker)
+# --port 8787: Default port
+# --log-level info: Ensure logs go to stdout
+CMD ["/usr/local/bin/pnpm", "exec", "wrangler", "dev", "--ip", "0.0.0.0", "--port", "8787", "--log-level", "info"]

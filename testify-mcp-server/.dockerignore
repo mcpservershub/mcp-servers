@@ -1,0 +1,45 @@
+# Git files
+.git
+.gitignore
+
+# Build artifacts
+testify-mcp-server
+*.exe
+*.test
+*.out
+*.prof
+
+# Test files and data
+tests/
+data/
+coverage/
+coverage.out
+coverage.html
+
+# Documentation
+*.md
+example_usage.md
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Docker files
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Temporary files
+tmp/
+temp/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Development files
+Makefile
+workspace/

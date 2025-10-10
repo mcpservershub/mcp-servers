@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  chrome-devtools-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: chrome-devtools-mcp:latest
+    container_name: chrome-devtools-mcp
+
+    # Security options for Chrome sandbox
+    security_opt:
+      - seccomp:unconfined
+
+    # Capabilities required for Chrome (alternative to --no-sandbox)
+    cap_add:
+      - SYS_ADMIN
+
+    # Shared memory size (Chrome requires more than default 64MB)
+    shm_size: '2gb'
+
+    # Environment variables
+    environment:
+      - NODE_ENV=production
+      - DEBUG=${DEBUG:-}
+      - CHROME_BIN=/usr/bin/chromium-browser
+      - PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
+    # Volumes for persistent cache (optional)
+    volumes:
+      - chrome-cache:/home/nonroot/.cache/chrome-devtools-mcp
+
+    # Override default command with custom arguments
+    # Uncomment and modify as needed
+    # command: ["--headless", "--isolated", "--channel=stable"]
+
+    # stdin/stdout for MCP communication
+    stdin_open: true
+    tty: false
+
+    # Restart policy
+    restart: unless-stopped
+
+    # Resource limits (adjust as needed)
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+
+volumes:
+  chrome-cache:
+    driver: local

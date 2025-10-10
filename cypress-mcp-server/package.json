@@ -1,0 +1,42 @@
+{
+  "name": "@enhanced/cypress-mcp-server",
+  "version": "1.0.0",
+  "description": "Enhanced Cypress MCP Server with Selenium integration, intelligent test generation and browser automation",
+  "main": "src/index.js",
+  "type": "module",
+  "bin": {
+    "cypress-mcp": "./src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "node test/test-server.js"
+  },
+  "keywords": [
+    "mcp",
+    "cypress",
+    "selenium",
+    "webdriver",
+    "browser-automation",
+    "test-generation",
+    "page-objects",
+    "playwright",
+    "puppeteer"
+  ],
+  "author": "Enhanced MCP Server",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.13.1",
+    "puppeteer": "^24.10.2",
+    "cheerio": "^1.1.0",
+    "zod": "^3.25.67",
+    "uuid": "^10.0.0",
+    "fs-extra": "^11.2.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
