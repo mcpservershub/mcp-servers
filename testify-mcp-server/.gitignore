@@ -4,7 +4,7 @@
 *.dll
 *.so
 *.dylib
-testify-mcp-server
+/testify-mcp-server
 
 # Test binary, built with `go test -c`
 *.test

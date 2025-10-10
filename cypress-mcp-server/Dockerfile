@@ -23,8 +23,8 @@ RUN addgroup mcpuser && adduser -D -G mcpuser mcpuser
 # Copy package files
 COPY package.json package-lock.json ./
 
-# Install Node.js dependencies
-RUN npm install --only=production && npm cache clean --force
+# Install Node.js dependencies using npm ci for reproducible builds
+RUN npm ci --only=production && npm cache clean --force
 
 # Copy source code
 COPY src/ ./src/

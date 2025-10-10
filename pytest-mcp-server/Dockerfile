@@ -64,7 +64,8 @@ USER root
 RUN apk update && apk add \
   vim \
   less \
-  htop 
+  htop \
+  uv
 
 USER appuser
 

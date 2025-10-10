@@ -5,73 +5,60 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 
 	"github.com/mark3labs/mcp-go/server"
-	testifyserver "github.com/mcpservershub/mcpservers/testify-mcp/pkg/server"
-)
-
-var (
-	version = "1.0.0"
-	name    = "testify-mcp-server"
+	mcpserver "github.com/mcpservershub/mcpservers/testify-mcp/pkg/server"
 )
 
 func main() {
-	var (
-		workDir    = flag.String("work-dir", ".", "Working directory for Go projects")
-		dataDir    = flag.String("data-dir", "./data", "Directory to store test data and history")
-		port       = flag.Int("port", 0, "Port to listen on (0 for stdio)")
-		showVersion = flag.Bool("version", false, "Show version and exit")
-		debug      = flag.Bool("debug", false, "Enable debug logging")
-	)
+	// Parse command-line flags
+	workDir := flag.String("work-dir", "/workspace", "Working directory for test execution")
+	dataDir := flag.String("data-dir", "/app/data", "Data directory for storing analysis results")
+	debug := flag.Bool("debug", false, "Enable debug logging")
 	flag.Parse()
 
-	if *showVersion {
-		fmt.Printf("%s version %s\n", name, version)
-		os.Exit(0)
-	}
-
+	// Set up logging
 	if *debug {
 		log.SetFlags(log.LstdFlags | log.Lshortfile)
-		log.Println("Debug logging enabled")
+		log.Println("Debug mode enabled")
 	}
 
-	workDirAbs, err := filepath.Abs(*workDir)
-	if err != nil {
-		log.Fatalf("Failed to resolve work directory: %v", err)
+	// Ensure directories exist
+	if err := ensureDir(*workDir); err != nil {
+		log.Fatalf("Failed to create work directory: %v", err)
+	}
+	if err := ensureDir(*dataDir); err != nil {
+		log.Fatalf("Failed to create data directory: %v", err)
 	}
 
-	dataDirAbs, err := filepath.Abs(*dataDir)
-	if err != nil {
-		log.Fatalf("Failed to resolve data directory: %v", err)
-	}
+	log.Printf("Starting Testify MCP Server...")
+	log.Printf("Work directory: %s", *workDir)
+	log.Printf("Data directory: %s", *dataDir)
 
-	if *debug {
-		log.Printf("Work directory: %s", workDirAbs)
-		log.Printf("Data directory: %s", dataDirAbs)
-	}
+	// Create and configure the Testify MCP server
+	testifyServer := mcpserver.NewTestifyMCPServer(*workDir, *dataDir)
+	mcpSrv := testifyServer.CreateMCPServer()
 
-	testifyServer := testifyserver.NewTestifyMCPServer(workDirAbs, dataDirAbs)
-	mcpServer := testifyServer.CreateMCPServer()
-
-	if *debug {
-		log.Printf("Starting %s v%s", name, version)
-		if *port > 0 {
-			log.Printf("Listening on port %d", *port)
-		} else {
-			log.Println("Using stdio transport")
-		}
-	}
-
-	if *port > 0 {
-		log.Printf("HTTP transport not yet supported in this version, using stdio")
-	}
-
-	if err := server.ServeStdio(mcpServer); err != nil {
+	// Start the MCP server
+	if err := server.ServeStdio(mcpSrv); err != nil {
 		log.Fatalf("Server error: %v", err)
 	}
+}
 
-	if *debug {
-		log.Println("Server stopped")
+// ensureDir creates a directory if it doesn't exist
+func ensureDir(dir string) error {
+	info, err := os.Stat(dir)
+	if os.IsNotExist(err) {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			return fmt.Errorf("failed to create directory %s: %w", dir, err)
+		}
+		return nil
 	}
+	if err != nil {
+		return fmt.Errorf("failed to stat directory %s: %w", dir, err)
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("%s exists but is not a directory", dir)
+	}
+	return nil
 }
