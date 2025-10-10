@@ -1,0 +1,40 @@
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. STRING-MANIPULATION.
+       AUTHOR. GnuCOBOL MCP Test Suite.
+
+       DATA DIVISION.
+       WORKING-STORAGE SECTION.
+       01 FIRST-NAME       PIC X(20) VALUE "John".
+       01 LAST-NAME        PIC X(20) VALUE "Doe".
+       01 FULL-NAME        PIC X(50).
+       01 UPPER-NAME       PIC X(50).
+       01 NAME-LENGTH      PIC 9(3).
+
+       PROCEDURE DIVISION.
+       MAIN-LOGIC.
+           PERFORM CONCATENATE-NAMES.
+           PERFORM CONVERT-UPPERCASE.
+           PERFORM CALCULATE-LENGTH.
+           PERFORM DISPLAY-RESULTS.
+           STOP RUN.
+
+       CONCATENATE-NAMES.
+           STRING FIRST-NAME DELIMITED BY SPACE
+                  " "
+                  LAST-NAME DELIMITED BY SPACE
+               INTO FULL-NAME
+           END-STRING.
+
+       CONVERT-UPPERCASE.
+           MOVE FUNCTION UPPER-CASE(FULL-NAME) TO UPPER-NAME.
+
+       CALCULATE-LENGTH.
+           INSPECT FULL-NAME TALLYING NAME-LENGTH
+               FOR CHARACTERS BEFORE INITIAL SPACE.
+
+       DISPLAY-RESULTS.
+           DISPLAY "First Name: " FIRST-NAME.
+           DISPLAY "Last Name: " LAST-NAME.
+           DISPLAY "Full Name: " FULL-NAME.
+           DISPLAY "Uppercase: " UPPER-NAME.
+           DISPLAY "Name Length: " NAME-LENGTH.

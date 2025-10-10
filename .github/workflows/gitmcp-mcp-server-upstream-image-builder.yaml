@@ -1,12 +1,12 @@
-name: Build Chrome-Devtools-upstream MCP Docker Image V2
+name: Build GitMCP-upstream MCP Docker Image V2
 
 on:
   push:
     branches: [main]
-    paths: ["chrome-devtools-mcp-server-upstream/**"]
+    paths: ["gitmcp-mcp-server-upstream/**"]
   pull_request:
     branches: [main]
-    paths: ["chrome-devtools-mcp-server-upstream/**"]
+    paths: ["gitmcp-mcp-server-upstream/**"]
   workflow_dispatch:
   schedule:
     - cron: "0 0 * * 1" # every Monday at 00:00 UTC
@@ -14,11 +14,11 @@ on:
     types: [upstream-update]
 
 env:
-  PROJECT: chrome-devtools-mcp-server-upstream
-  TEMP_DIR: chrome-devtools-mcp-server
-  UPSTREAM_REPO: chromeDevTools/chrome-devtools-mcp
+  PROJECT: gitmcp-mcp-server-upstream
+  TEMP_DIR: gitmcp-mcp-server
+  UPSTREAM_REPO: idosal/git-mcp
   DOCKER_REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/chrome-devtools-mcp-server-upstream
+  IMAGE_NAME: ${{ github.repository }}/gitmcp-mcp-server-upstream
 
 jobs:
   build-if-changed:
