@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "chromaDB": {
+      "url": "http://localhost:8080"
+    }
+  }
+}

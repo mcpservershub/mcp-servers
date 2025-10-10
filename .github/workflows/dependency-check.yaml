@@ -5,13 +5,12 @@ on:
     branches:
       - main
     paths:
-      - "dependency-check/**"
+      - "dependency-check-server/**"
   pull_request:
     branches:
       - main
     paths:
-      - "dependency-check/**"
-
+      - "dependency-check-server/**"
 
 jobs:
   build-and-push:
@@ -21,10 +20,10 @@ jobs:
       packages: write
       id-token: write
     env:
-      PROJECT_NAME: dependency-check
-      PROJECT_PATH: dependency-check
+      PROJECT_NAME: dependency-check-server
+      PROJECT_PATH: dependency-check-server
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: ${{ github.repository_owner }}/dependency-check
+      IMAGE_PREFIX: ${{ github.repository }}/containers/dependency-check-server
 
     steps:
       - name: Checkout repository
@@ -68,7 +67,7 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: sigstore/cosign-installer@v3.9.2
         with:
-          cosign-release: 'v2.5.3'
+          cosign-release: "v2.5.3"
 
       - name: Sign the images with GitHub OIDC Token
         if: github.event_name != 'pull_request'

@@ -1,0 +1,1 @@
+"""Test suite for Inspektor-Gadget MCP Server"""

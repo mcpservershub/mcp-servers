@@ -1,0 +1,34 @@
+FROM cgr.dev/chainguard/python:latest-dev AS builder
+
+WORKDIR /app
+
+# Copy metadata so Hatchling can validate
+COPY pyproject.toml  /app/
+
+# Install Hatchling and build your editable package
+RUN pip install --no-cache-dir hatchling
+
+# Copy sources & create venv
+RUN python3 -m venv venv 
+ENV PATH="/app/venv/bin":$PATH
+
+COPY src/ /app/src/
+RUN pip install --no-cache-dir -e .
+
+FROM cgr.dev/chainguard/python:latest AS final
+
+# Only install the Python runtime
+
+WORKDIR /app
+
+# Pull in the venv (with all deps) and your source (for the editable install)
+COPY --from=builder /app/venv    /app/venv
+COPY --from=builder /app/src     /app/src
+
+ENV PATH="/opt/venv/bin:$PATH" 
+ENV NEO4J_URL="bolt://host.docker.internal:7687"
+ENV NEO4J_USERNAME="neo4j"
+ENV NEO4J_PASSWORD="password"
+
+# Run via the console-script entry point
+CMD ["mcp-neo4j-cypher","--db-url",   "${NEO4J_URL}", "--username", "${NEO4J_USERNAME}", "--password", "${NEO4J_PASSWORD}"]

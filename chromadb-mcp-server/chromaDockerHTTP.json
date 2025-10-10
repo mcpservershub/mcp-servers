@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "chroma": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--network",
+        "chromadb",
+        "--env-file",
+        "/home/santosh/mcp-servers/chromaDB/.env",
+        "santoshkal/chromadb-mcp:test"
+      ]
+    }
+  }
+}

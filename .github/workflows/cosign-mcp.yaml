@@ -5,12 +5,12 @@ on:
     branches:
       - main
     paths:
-      - "cosign-mcp/**"
+      - "cosign-mcp-server/**"
   pull_request:
     branches:
       - main
     paths:
-      - "cosign-mcp/**"
+      - "cosign-mcp-server/**"
 
 jobs:
   build-and-push:
@@ -20,10 +20,10 @@ jobs:
       packages: write
       id-token: write
     env:
-      PROJECT_NAME: cosign-mcp
-      PROJECT_PATH: cosign-mcp
+      PROJECT_NAME: cosign-mcp-server
+      PROJECT_PATH: cosign-mcp-server
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: ${{ github.repository_owner }}/cosign-mcp
+      IMAGE_PREFIX: ${{ github.repository }}/containers/cosign-mcp-server
 
     steps:
       - name: Checkout repository

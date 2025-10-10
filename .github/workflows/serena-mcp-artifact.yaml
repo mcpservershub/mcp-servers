@@ -8,17 +8,18 @@ on:
     branches:
       - main
     paths:
-      - "serena-mcp/**"
+      - "serena-mcp-server/**"
   pull_request:
     branches:
       - main
     paths:
-      - "serena-mcp/**"
+      - "serena-mcp-server/**"
   workflow_dispatch:
 
 env:
+  PROJECT_NAME: serena-mcp-server
   REGISTRY: ghcr.io
-  REPOSITORY: ${{ github.repository }}
+  REPOSITORY: ${{ github.repository }}/standaloneocis
 
 jobs:
   build:

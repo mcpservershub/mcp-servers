@@ -5,12 +5,12 @@ on:
     branches:
       - main
     paths:
-      - "litellm-mcp/**"
+      - "litellm-mcp-server/**"
   pull_request:
     branches:
       - main
     paths:
-      - "litellm-mcp/**"
+      - "litellm-mcp-server/**"
 
 jobs:
   build-and-push:
@@ -20,10 +20,10 @@ jobs:
       packages: write
       id-token: write
     env:
-      PROJECT_NAME: litellm-mcp
-      PROJECT_PATH: litellm-mcp
+      PROJECT_NAME: litellm-mcp-server
+      PROJECT_PATH: litellm-mcp-server
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: ${{ github.repository_owner }}/litellm-mcp
+      IMAGE_PREFIX: ${{ github.repository }}/containers/litellm-mcp-server
 
     steps:
       - name: Checkout repository
