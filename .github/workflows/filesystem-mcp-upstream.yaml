@@ -16,7 +16,8 @@ on:
 env:
   PROJECT: filesystem-mcp-server-upstream
   TEMP_DIR: filesystem-mcp-server
-  UPSTREAM_REPO: modelcontextprotocol/servers/filesystem
+  UPSTREAM_REPO: modelcontextprotocol/servers
+  UPSTREAM_SUBPATH: src/filesystem
   DOCKER_REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}/filesystem-mcp-server-upstream
 jobs:
@@ -71,7 +72,13 @@ jobs:
         with:
           repository: ${{ env.UPSTREAM_REPO }}
           ref: ${{ steps.check.outputs.branch }}
-          path: ${{ env.TEMP_DIR }}
+          path: repo-full
+
+      - name: Extract subdirectory
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          mv repo-full/${{ env.UPSTREAM_SUBPATH }} ${{ env.TEMP_DIR }}
+          rm -rf repo-full
 
       - name: Copy Dockerfile from this repo into upstream clone
         if: steps.check.outputs.changed == 'true'
@@ -111,5 +118,8 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git add ".github/.${{ env.PROJECT }}-sha"
-          git diff --staged --quiet || git commit -m "Update ${{ env.PROJECT }} SHA to ${{ steps.check.outputs.current_sha }}"
-          git push
+          git diff --staged --quiet || {
+            git pull --rebase origin main
+            git commit -m "Update ${{ env.PROJECT }} SHA to ${{ steps.check.outputs.current_sha }}"
+            git push
+          }

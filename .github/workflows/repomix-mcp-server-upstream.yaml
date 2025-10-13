@@ -1,12 +1,12 @@
-name: Build Inspektor-gadget-upstream MCP Docker Image V2
+name: Build Repomix-upstream MCP Docker Image V2
 
 on:
   push:
     branches: [main]
-    paths: ["inspektor-gadget-mcp-server-upstream/**"]
+    paths: ["repomix-mcp-server-upstream/**"]
   pull_request:
     branches: [main]
-    paths: ["inspektor-gadget-mcp-server-upstream/**"]
+    paths: ["repomix-mcp-server-upstream/**"]
   workflow_dispatch:
   schedule:
     - cron: "0 0 * * 1" # every Monday at 00:00 UTC
@@ -14,11 +14,12 @@ on:
     types: [upstream-update]
 
 env:
-  PROJECT: inspektor-gadget-mcp-server-upstream
-  TEMP_DIR: inspektor-gadget-mcp-server
-  UPSTREAM_REPO: inspektor-gadget/ig-mcp-server
+  PROJECT: repomix-mcp-server-upstream
+  TEMP_DIR: repomix-mcp-server
+  UPSTREAM_REPO: yamadashy/repomix
   DOCKER_REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/inspektor-gadget-mcp-server-upstream
+  IMAGE_NAME: ${{ github.repository }}/repomix-mcp-server-upstream
+
 jobs:
   build-if-changed:
     runs-on: ubuntu-latest
@@ -111,5 +112,8 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git add ".github/.${{ env.PROJECT }}-sha"
-          git diff --staged --quiet || git commit -m "Update ${{ env.PROJECT }} SHA to ${{ steps.check.outputs.current_sha }}"
-          git push
+          git diff --staged --quiet || {
+            git pull --rebase origin main
+            git commit -m "Update ${{ env.PROJECT }} SHA to ${{ steps.check.outputs.current_sha }}"
+            git push
+          }
