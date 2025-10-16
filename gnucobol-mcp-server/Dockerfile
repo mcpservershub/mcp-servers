@@ -1,5 +1,4 @@
 # Multi-stage Dockerfile for GnuCOBOL MCP Server
-# Optimized for production use with minimal image size
 
 # Stage 1: Base image with GnuCOBOL compiler
 FROM cgr.dev/chainguard/wolfi-base AS builder
