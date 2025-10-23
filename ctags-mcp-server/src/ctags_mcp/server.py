@@ -33,40 +33,43 @@ async def generate_tags(
     languages: Optional[List[str]] = None,
     exclude_patterns: Optional[List[str]] = None,
     output_file: str = "tags",
+    output_format: str = "u-ctags",
     extra_options: Optional[List[str]] = None
 ) -> Dict[str, Any]:
     """
     Generate CTags index for a project or directory.
-    
+
     This tool generates a tags file by indexing source code in the specified
     path using Universal CTags. The tags file can then be used for symbol
     navigation and search operations.
-    
+
     Args:
         path: Directory or file path to index
         recursive: Recursively index subdirectories (default: True)
         languages: Specific languages to index (e.g., ["python", "javascript"])
         exclude_patterns: Patterns to exclude from indexing (e.g., ["*.min.js", "node_modules"])
         output_file: Output tags file path (default: "tags")
+        output_format: Output format - "u-ctags", "e-ctags", "etags", "xref", "json" (default: "u-ctags")
         extra_options: Additional ctags command-line options
-    
+
     Returns:
         Dictionary with generation status, tags file path, and statistics
-    
+
     Example:
         result = await generate_tags(
             path="./src",
             recursive=True,
             languages=["python", "javascript"],
             exclude_patterns=["*.test.js", "__pycache__"],
-            output_file="./project.tags"
+            output_file="./project.tags",
+            output_format="json"
         )
     """
     # Validate input path
     is_valid, error = validate_path(path)
     if not is_valid:
         return {"success": False, "error": error}
-    
+
     try:
         result = ctags_wrapper.generate_tags(
             path=path,
@@ -74,6 +77,7 @@ async def generate_tags(
             recursive=recursive,
             languages=languages,
             exclude_patterns=exclude_patterns,
+            output_format=output_format,
             extra_options=extra_options
         )
         return result
@@ -474,6 +478,435 @@ async def get_file_outline(
         }
     except Exception as e:
         logger.error(f"Failed to generate outline: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@mcp.tool()
+async def generate_project_symbols(
+    tags_file: str = "tags",
+    group_by: str = "kind",
+    languages: Optional[List[str]] = None,
+    symbol_kinds: Optional[List[str]] = None,
+    include_private: bool = True
+) -> Dict[str, Any]:
+    """
+    Extract all symbols from a project-wide tags file.
+
+    This tool generates a comprehensive list of all symbols across the entire
+    project by reading from an existing tags file. Symbols can be grouped by
+    various criteria for better organization.
+
+    Args:
+        tags_file: Path to tags file (default: "tags")
+        group_by: How to group symbols - "kind", "file", "language", or "none" (default: "kind")
+        languages: Filter by specific languages (optional)
+        symbol_kinds: Filter by symbol types (e.g., ["function", "class"]) (optional)
+        include_private: Include private symbols (default: True)
+
+    Returns:
+        Dictionary with symbols organized according to group_by parameter
+
+    Example:
+        symbols = await generate_project_symbols(
+            tags_file="./tags",
+            group_by="kind",
+            symbol_kinds=["function", "class"],
+            include_private=False
+        )
+    """
+    # Validate tags file
+    is_valid, error = validate_tags_file_util(tags_file)
+    if not is_valid:
+        return {"success": False, "error": error}
+
+    try:
+        # Get all symbols from tags file
+        all_symbols = ctags_wrapper.get_all_symbols_from_tags(tags_file)
+
+        if not all_symbols:
+            return {
+                "success": True,
+                "symbols": {},
+                "total_count": 0,
+                "message": "No symbols found in tags file"
+            }
+
+        # Filter private symbols if needed
+        if not include_private:
+            all_symbols = [s for s in all_symbols if not s['name'].startswith('_')]
+
+        # Filter by symbol kinds if specified
+        if symbol_kinds:
+            all_symbols = [s for s in all_symbols if s.get('kind') in symbol_kinds]
+
+        # Filter by languages if specified (approximate by file extension)
+        if languages:
+            # Map common extensions to languages
+            lang_extensions = {
+                'python': ['.py', '.pyw'],
+                'javascript': ['.js', '.jsx', '.mjs'],
+                'typescript': ['.ts', '.tsx'],
+                'java': ['.java'],
+                'c': ['.c', '.h'],
+                'cpp': ['.cpp', '.hpp', '.cc', '.cxx', '.C', '.hh'],
+                'go': ['.go'],
+                'rust': ['.rs'],
+                'ruby': ['.rb'],
+                'php': ['.php'],
+                'cobol': ['.cbl', '.cob', '.cpy']
+            }
+
+            allowed_extensions = []
+            for lang in languages:
+                lang_lower = lang.lower()
+                if lang_lower in lang_extensions:
+                    allowed_extensions.extend(lang_extensions[lang_lower])
+
+            if allowed_extensions:
+                all_symbols = [
+                    s for s in all_symbols
+                    if any(s.get('file', '').endswith(ext) for ext in allowed_extensions)
+                ]
+
+        # Group symbols based on group_by parameter
+        result = {
+            "success": True,
+            "total_count": len(all_symbols),
+            "group_by": group_by
+        }
+
+        if group_by == "kind":
+            grouped = {}
+            for symbol in all_symbols:
+                kind = symbol.get('kind', 'unknown')
+                if kind not in grouped:
+                    grouped[kind] = []
+                grouped[kind].append(symbol)
+            result["symbols"] = grouped
+
+        elif group_by == "file":
+            grouped = {}
+            for symbol in all_symbols:
+                file_path = symbol.get('file', 'unknown')
+                if file_path not in grouped:
+                    grouped[file_path] = []
+                grouped[file_path].append(symbol)
+            result["symbols"] = grouped
+
+        elif group_by == "language":
+            # Group by file extension as proxy for language
+            grouped = {}
+            for symbol in all_symbols:
+                file_path = symbol.get('file', '')
+                ext = os.path.splitext(file_path)[1] or 'no_extension'
+                if ext not in grouped:
+                    grouped[ext] = []
+                grouped[ext].append(symbol)
+            result["symbols"] = grouped
+
+        else:  # group_by == "none"
+            result["symbols"] = all_symbols
+
+        return result
+
+    except Exception as e:
+        logger.error(f"Failed to generate project symbols: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@mcp.tool()
+async def generate_project_outline(
+    tags_file: str = "tags",
+    max_depth: int = 3,
+    include_private: bool = False,
+    show_line_numbers: bool = True
+) -> Dict[str, Any]:
+    """
+    Generate a hierarchical outline of the entire project structure.
+
+    This tool creates a comprehensive, hierarchical view of the project's
+    code structure by analyzing all symbols in the tags file, organized
+    by files and symbol types.
+
+    Args:
+        tags_file: Path to tags file (default: "tags")
+        max_depth: Maximum nesting depth for hierarchy (default: 3)
+        include_private: Include private symbols (default: False)
+        show_line_numbers: Include line numbers in outline (default: True)
+
+    Returns:
+        Dictionary with hierarchical project structure
+
+    Example:
+        outline = await generate_project_outline(
+            tags_file="./tags",
+            max_depth=2,
+            include_private=False
+        )
+    """
+    # Validate tags file
+    is_valid, error = validate_tags_file_util(tags_file)
+    if not is_valid:
+        return {"success": False, "error": error}
+
+    try:
+        # Get all files referenced in tags
+        all_files = ctags_wrapper.get_all_files_from_tags(tags_file)
+
+        if not all_files:
+            return {
+                "success": True,
+                "outline": {},
+                "file_count": 0,
+                "message": "No files found in tags file"
+            }
+
+        # Build outline for each file
+        project_outline = {}
+        total_symbols = 0
+
+        for file_path in all_files:
+            # Get symbols for this file
+            symbols = ctags_wrapper.get_symbols_in_file(tags_file, file_path)
+
+            # Filter private symbols if needed
+            if not include_private:
+                symbols = [s for s in symbols if not s['name'].startswith('_')]
+
+            if not symbols:
+                continue
+
+            # Organize symbols by kind
+            file_structure = {
+                "path": os.path.abspath(file_path),
+                "classes": [],
+                "functions": [],
+                "variables": [],
+                "other": []
+            }
+
+            for symbol in symbols:
+                kind = symbol.get('kind', '').lower()
+
+                # Prepare symbol info
+                symbol_info = {
+                    "name": symbol['name'],
+                    "kind": symbol.get('kind')
+                }
+
+                if show_line_numbers:
+                    symbol_info["line"] = symbol.get('line', 0)
+
+                # Categorize symbol
+                if 'class' in kind or kind == 'c':
+                    file_structure['classes'].append(symbol_info)
+                elif 'function' in kind or 'method' in kind or kind in ['f', 'm']:
+                    file_structure['functions'].append(symbol_info)
+                elif 'variable' in kind or 'member' in kind or kind in ['v', 'm']:
+                    file_structure['variables'].append(symbol_info)
+                else:
+                    file_structure['other'].append(symbol_info)
+
+            # Sort by line number if showing line numbers
+            if show_line_numbers:
+                for category in ['classes', 'functions', 'variables', 'other']:
+                    file_structure[category].sort(key=lambda x: x.get('line', 0))
+
+            # Calculate symbol counts
+            file_structure['symbol_count'] = len(symbols)
+            total_symbols += len(symbols)
+
+            project_outline[file_path] = file_structure
+
+        return {
+            "success": True,
+            "outline": project_outline,
+            "file_count": len(project_outline),
+            "total_symbols": total_symbols,
+            "stats": {
+                "files_with_symbols": len(project_outline),
+                "total_files_in_tags": len(all_files)
+            }
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to generate project outline: {e}")
+        return {"success": False, "error": str(e)}
+
+
+# ============== Discovery and Utility Tools ==============
+
+@mcp.tool()
+async def generate_cross_reference(
+    path: str,
+    recursive: bool = False,
+    languages: Optional[List[str]] = None,
+    exclude_patterns: Optional[List[str]] = None
+) -> Dict[str, Any]:
+    """
+    Generate a cross-reference (xref) output for a file or project.
+
+    This tool creates a human-readable tabular cross-reference showing
+    all symbols with their locations and context. Unlike tags files,
+    xref output is meant for direct reading and documentation.
+
+    Works with both single files and entire directories/projects.
+
+    Args:
+        path: Path to source file or directory
+        recursive: Recursively process directories (default: False)
+        languages: Filter by specific languages (optional)
+        exclude_patterns: Patterns to exclude (e.g., ["*.md", "test_*"]) (optional)
+
+    Returns:
+        Dictionary with cross-reference entries
+
+    Example (single file):
+        xref = await generate_cross_reference(
+            path="./CUSTOMER.COB",
+            languages=["COBOL"]
+        )
+
+    Example (project):
+        xref = await generate_cross_reference(
+            path="./src",
+            recursive=True,
+            languages=["Python"],
+            exclude_patterns=["test_*.py", "__pycache__"]
+        )
+    """
+    # Validate path
+    is_valid, error = validate_path(path)
+    if not is_valid:
+        return {"success": False, "error": error}
+
+    try:
+        entries = ctags_wrapper.generate_cross_reference(
+            path=path,
+            recursive=recursive,
+            languages=languages,
+            exclude_patterns=exclude_patterns
+        )
+
+        return {
+            "success": True,
+            "path": os.path.abspath(path),
+            "is_directory": os.path.isdir(path),
+            "entries": entries,
+            "count": len(entries)
+        }
+    except Exception as e:
+        logger.error(f"Failed to generate cross-reference: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@mcp.tool()
+async def detect_file_language(
+    file_path: str
+) -> Dict[str, Any]:
+    """
+    Detect the programming language of a file.
+
+    This tool uses CTags' language detection to identify what programming
+    language a file is written in, based on file extension, shebang, and
+    content analysis.
+
+    Args:
+        file_path: Path to file to analyze
+
+    Returns:
+        Dictionary with detected language
+
+    Example:
+        result = await detect_file_language(file_path="./script.sh")
+        # Returns: {"success": True, "file": "...", "language": "Sh"}
+    """
+    # Validate file path
+    is_valid, error = validate_path(file_path)
+    if not is_valid:
+        return {"success": False, "error": error}
+
+    try:
+        language = ctags_wrapper.detect_language(file_path)
+
+        if language:
+            return {
+                "success": True,
+                "file": os.path.abspath(file_path),
+                "language": language
+            }
+        else:
+            return {
+                "success": False,
+                "file": os.path.abspath(file_path),
+                "error": "Language could not be detected"
+            }
+    except Exception as e:
+        logger.error(f"Failed to detect language: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@mcp.tool()
+async def list_supported_languages() -> Dict[str, Any]:
+    """
+    List all programming languages supported by CTags.
+
+    This tool returns a comprehensive list of all languages that Universal
+    CTags can parse and generate tags for.
+
+    Returns:
+        Dictionary with list of supported languages
+
+    Example:
+        result = await list_supported_languages()
+        # Returns: {"success": True, "languages": ["Python", "JavaScript", ...], "count": 150}
+    """
+    try:
+        languages = ctags_wrapper.list_languages()
+
+        return {
+            "success": True,
+            "languages": languages,
+            "count": len(languages)
+        }
+    except Exception as e:
+        logger.error(f"Failed to list languages: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@mcp.tool()
+async def list_language_kinds(
+    language: str
+) -> Dict[str, Any]:
+    """
+    List all tag kinds (types) available for a specific language.
+
+    This tool shows what types of symbols CTags can identify in a given
+    language. For example, for Python it shows: classes, functions, variables, etc.
+    For COBOL: paragraphs, data, sections, etc.
+
+    Args:
+        language: Language name (e.g., "Python", "COBOL", "JavaScript")
+
+    Returns:
+        Dictionary with kind information for the language
+
+    Example:
+        result = await list_language_kinds(language="COBOL")
+        # Returns kinds like: paragraph, data, section, etc.
+    """
+    try:
+        result = ctags_wrapper.list_tag_kinds(language)
+
+        if "error" in result:
+            return {"success": False, "error": result["error"]}
+
+        return {
+            "success": True,
+            **result
+        }
+    except Exception as e:
+        logger.error(f"Failed to list tag kinds: {e}")
         return {"success": False, "error": str(e)}
 
 

@@ -1,1 +1,0 @@
-"""Tests for Universal CTags MCP Server."""
