@@ -6,6 +6,7 @@ import os
 import json
 import asyncio
 import logging
+import re
 from pathlib import Path
 from typing import Dict, Optional, List, Any, Union
 from datetime import datetime
@@ -576,6 +577,583 @@ class LSPManager:
             for key, symbols in (state.symbol_cache or {}).items():
                 self.symbol_cache[key] = [SymbolInformation(**sym) for sym in symbols]
     
+    def generate_cobol_cfg(
+        self,
+        file_path: str,
+        section_name: Optional[str] = None,
+        output_format: str = "dot",
+        collapse_fallthrough: bool = False
+    ) -> Dict[str, Any]:
+        """
+        Generate Control-Flow Graph for a COBOL file.
+
+        Args:
+            file_path: Path to COBOL file
+            section_name: Specific section/paragraph to analyze (optional)
+            output_format: Output format ('dot', 'json', 'arc')
+            collapse_fallthrough: Collapse sequential fallthrough statements
+
+        Returns:
+            CFG data in requested format
+        """
+        # Get document symbols to understand program structure
+        symbols = self.request_document_symbols(file_path, Language.COBOL)
+
+        # Read the COBOL file for analysis
+        abs_path = self.workspace_root / file_path
+        with open(abs_path, 'r') as f:
+            content = f.read()
+            lines = content.splitlines()
+
+        # Parse COBOL control flow
+        cfg_data = self._parse_cobol_control_flow(
+            lines, symbols, section_name, collapse_fallthrough
+        )
+
+        # Format output based on requested format
+        if output_format == "dot":
+            return self._format_cfg_as_dot(cfg_data)
+        elif output_format == "json":
+            return cfg_data
+        elif output_format == "arc":
+            return self._format_cfg_as_arc(cfg_data)
+        else:
+            raise ValueError(f"Unsupported output format: {output_format}")
+
+    def generate_cobol_project_cfg(
+        self,
+        file_pattern: Optional[str] = None,
+        output_format: str = "dot",
+        include_calls: bool = True,
+        collapse_fallthrough: bool = False
+    ) -> Dict[str, Any]:
+        """
+        Generate Control-Flow Graphs for all COBOL files in project.
+
+        Args:
+            file_pattern: Glob pattern to filter files
+            output_format: Output format ('dot', 'json', 'arc')
+            include_calls: Include inter-program CALL relationships
+            collapse_fallthrough: Collapse sequential fallthrough statements
+
+        Returns:
+            Project-wide CFG data
+        """
+        import glob
+
+        # Default COBOL file patterns
+        if not file_pattern:
+            patterns = ["**/*.cob", "**/*.COB", "**/*.cbl", "**/*.CBL", "**/*.cpy", "**/*.CPY"]
+        else:
+            patterns = [file_pattern]
+
+        # Find all COBOL files
+        cobol_files = []
+        for pattern in patterns:
+            matches = glob.glob(str(self.workspace_root / pattern), recursive=True)
+            cobol_files.extend([
+                str(Path(f).relative_to(self.workspace_root)) for f in matches
+            ])
+
+        # Remove duplicates
+        cobol_files = list(set(cobol_files))
+
+        # Generate CFG for each file
+        project_cfg = {
+            "workspace_root": str(self.workspace_root),
+            "file_pattern": file_pattern,
+            "files": []
+        }
+
+        call_graph = {} if include_calls else None
+
+        for file_path in cobol_files:
+            try:
+                cfg = self.generate_cobol_cfg(
+                    file_path,
+                    output_format=output_format,
+                    collapse_fallthrough=collapse_fallthrough
+                )
+
+                project_cfg["files"].append({
+                    "file_path": file_path,
+                    "cfg": cfg
+                })
+
+                # Extract CALL relationships if requested
+                if include_calls:
+                    # Get calls from raw_cfg if using formatted output
+                    raw_cfg = cfg.get("raw_cfg", cfg)
+                    if "calls" in raw_cfg:
+                        call_graph[file_path] = raw_cfg.get("calls", [])
+
+            except Exception as e:
+                self.logger.log(f"Error generating CFG for {file_path}: {e}", logging.WARNING)
+
+        # Add call graph if generated
+        if call_graph:
+            project_cfg["call_graph"] = call_graph
+
+        return project_cfg
+
+    def generate_combined_cfg_dot(self, project_cfg: Dict[str, Any]) -> str:
+        """
+        Generate a combined DOT file showing all programs and their call relationships.
+
+        Args:
+            project_cfg: Project CFG data from generate_cobol_project_cfg()
+
+        Returns:
+            DOT format string for the combined CFG
+        """
+        dot_lines = [
+            "digraph COBOL_Project_CFG {",
+            "  rankdir=TB;",
+            "  node [shape=box, style=rounded];",
+            "  compound=true;",
+            ""
+        ]
+
+        # Create a subgraph for each COBOL program
+        for file_data in project_cfg.get("files", []):
+            file_path = file_data["file_path"]
+            cfg = file_data["cfg"]
+
+            # Extract program name from file path
+            program_name = Path(file_path).stem.replace("-", "_")
+
+            # Create subgraph cluster for this program
+            dot_lines.append(f"  subgraph cluster_{program_name} {{")
+            dot_lines.append(f'    label="{file_path}";')
+            dot_lines.append("    style=filled;")
+            dot_lines.append("    color=lightgrey;")
+            dot_lines.append("")
+
+            # Get raw CFG data
+            raw_cfg = cfg.get("raw_cfg", cfg)
+
+            # Add nodes within this program
+            for node in raw_cfg.get("nodes", []):
+                node_id = f"{program_name}_{node['name'].replace('-', '_')}"
+                label = f"{node['name']} (L{node['line']})"
+                shape = "rectangle" if node["type"] == "section" else "ellipse"
+                dot_lines.append(f'    {node_id} [label="{label}", shape={shape}];')
+
+            # Add internal edges (PERFORM, GO TO)
+            for edge in raw_cfg.get("edges", []):
+                from_id = f"{program_name}_{edge['from'].replace('-', '_')}"
+                to_id = f"{program_name}_{edge['to'].replace('-', '_')}"
+                style = "dashed" if edge["type"] == "perform" else "solid"
+                dot_lines.append(f'    {from_id} -> {to_id} [style={style}, label="{edge["type"]}"];')
+
+            dot_lines.append("  }")
+            dot_lines.append("")
+
+        # Add inter-program CALL edges
+        call_graph = project_cfg.get("call_graph", {})
+        if call_graph:
+            dot_lines.append("  // Inter-program CALL relationships")
+
+            # Map of called program names to file paths
+            program_map = {Path(f["file_path"]).stem: f["file_path"]
+                          for f in project_cfg.get("files", [])}
+
+            for file_path, calls in call_graph.items():
+                caller_program = Path(file_path).stem.replace("-", "_")
+
+                for call in calls:
+                    called_program = call["to"].replace("-", "_")
+                    from_node = f"{caller_program}_{call['from'].replace('-', '_')}"
+
+                    # Check if called program exists in project
+                    if called_program.replace("_", "-") in program_map:
+                        # Find entry point of called program (first node)
+                        called_file = program_map[called_program.replace("_", "-")]
+                        called_file_data = next((f for f in project_cfg.get("files", [])
+                                                if f["file_path"] == called_file), None)
+
+                        if called_file_data:
+                            called_cfg = called_file_data["cfg"].get("raw_cfg", called_file_data["cfg"])
+                            nodes = called_cfg.get("nodes", [])
+                            if nodes:
+                                entry_node = nodes[0]["name"].replace("-", "_")
+                                to_node = f"{called_program}_{entry_node}"
+                                dot_lines.append(f'  {from_node} -> {to_node} [style=bold, color=red, label="CALL"];')
+                    else:
+                        # External program not in project
+                        external_node = f"external_{called_program}"
+                        dot_lines.append(f'  {external_node} [label="{call["to"]}\\n(External)", shape=hexagon, style=filled, fillcolor=yellow];')
+                        dot_lines.append(f'  {from_node} -> {external_node} [style=bold, color=red, label="CALL"];')
+
+        # Add copybook relationships
+        dot_lines.append("")
+        dot_lines.append("  // Copybook inclusions (compile-time dependencies)")
+        copybooks_used = set()
+        for file_data in project_cfg.get("files", []):
+            file_path = file_data["file_path"]
+            cfg = file_data["cfg"]
+            raw_cfg = cfg.get("raw_cfg", cfg)
+            program_name = Path(file_path).stem.replace("-", "_")
+
+            for copybook in raw_cfg.get("copybooks", []):
+                copybook_name = copybook["name"]
+                copybooks_used.add(copybook_name)
+
+                # Create copybook node (diamond shape, cyan)
+                copybook_node = f"copybook_{copybook_name.replace('-', '_')}"
+                dot_lines.append(f'  {copybook_node} [label="{copybook_name}\\n(Copybook)", shape=diamond, style=filled, fillcolor=cyan];')
+
+                # Link program to copybook
+                program_node = f"{program_name}_{list(raw_cfg.get('nodes', [{}]))[0]['name'].replace('-', '_')}" if raw_cfg.get("nodes") else program_name
+                dot_lines.append(f'  {program_node} -> {copybook_node} [style=dotted, color=blue, label="COPY"];')
+
+        # Add dynamic call relationships
+        dot_lines.append("")
+        dot_lines.append("  // Dynamic CALL statements (runtime determined)")
+        for file_data in project_cfg.get("files", []):
+            file_path = file_data["file_path"]
+            cfg = file_data["cfg"]
+            raw_cfg = cfg.get("raw_cfg", cfg)
+            program_name = Path(file_path).stem.replace("-", "_")
+
+            for dyn_call in raw_cfg.get("dynamic_calls", []):
+                # Skip if from is None
+                if not dyn_call.get("from"):
+                    continue
+
+                variable_name = dyn_call["variable"]
+                from_node = f"{program_name}_{dyn_call['from'].replace('-', '_')}"
+
+                # Create dynamic call node (octagon, orange)
+                dyn_node = f"dynamic_{program_name}_{variable_name.replace('-', '_')}"
+                dot_lines.append(f'  {dyn_node} [label="Dynamic CALL\\n{variable_name}", shape=octagon, style=filled, fillcolor=orange];')
+                dot_lines.append(f'  {from_node} -> {dyn_node} [style=dashed, color=darkorange, label="CALL"];')
+
+        # Add entry point markers
+        dot_lines.append("")
+        dot_lines.append("  // Alternative entry points")
+        for file_data in project_cfg.get("files", []):
+            file_path = file_data["file_path"]
+            cfg = file_data["cfg"]
+            raw_cfg = cfg.get("raw_cfg", cfg)
+            program_name = Path(file_path).stem.replace("-", "_")
+
+            for entry in raw_cfg.get("entry_points", []):
+                # Skip if context is None
+                if not entry.get("context"):
+                    continue
+
+                entry_name = entry["name"]
+                context_node = f"{program_name}_{entry['context'].replace('-', '_')}"
+
+                # Create entry point node (invhouse/trapezoid, lightgreen)
+                entry_node = f"entry_{program_name}_{entry_name.replace('-', '_')}"
+                dot_lines.append(f'  {entry_node} [label="ENTRY\\n{entry_name}", shape=invhouse, style=filled, fillcolor=lightgreen];')
+                dot_lines.append(f'  {entry_node} -> {context_node} [style=solid, color=green, label="entry"];')
+
+        # Add external data sharing
+        dot_lines.append("")
+        dot_lines.append("  // External data sharing (shared memory)")
+        external_data_map = {}
+        for file_data in project_cfg.get("files", []):
+            file_path = file_data["file_path"]
+            cfg = file_data["cfg"]
+            raw_cfg = cfg.get("raw_cfg", cfg)
+            program_name = Path(file_path).stem.replace("-", "_")
+
+            for ext_data in raw_cfg.get("external_data", []):
+                data_name = ext_data["name"]
+
+                # Track which programs use which external data
+                if data_name not in external_data_map:
+                    external_data_map[data_name] = []
+                external_data_map[data_name].append(program_name)
+
+        # Create nodes and edges for shared external data
+        for data_name, programs in external_data_map.items():
+            if len(programs) > 1:  # Only show if actually shared
+                data_node = f"external_data_{data_name.replace('-', '_')}"
+                dot_lines.append(f'  {data_node} [label="EXTERNAL\\n{data_name}", shape=cylinder, style=filled, fillcolor=lightblue];')
+
+                # Link all programs that use this data
+                for program_name in programs:
+                    program_node = f"{program_name}_{'_'.join(program_name.split('_')[:2])}"  # Approximate first node
+                    dot_lines.append(f'  {data_node} -> {program_node} [style=dotted, color=purple, dir=both, label="shared"];')
+
+        # Add file sharing relationships
+        dot_lines.append("")
+        dot_lines.append("  // File sharing (I/O dependencies)")
+        file_sharing_map = {}
+        for file_data in project_cfg.get("files", []):
+            file_path = file_data["file_path"]
+            cfg = file_data["cfg"]
+            raw_cfg = cfg.get("raw_cfg", cfg)
+            program_name = Path(file_path).stem.replace("-", "_")
+
+            for file_select in raw_cfg.get("file_sharing", []):
+                physical_file = file_select.get("physical_file") or file_select["logical_name"]
+
+                # Track which programs access which files
+                if physical_file not in file_sharing_map:
+                    file_sharing_map[physical_file] = []
+                file_sharing_map[physical_file].append({
+                    "program": program_name,
+                    "logical": file_select["logical_name"]
+                })
+
+        # Create nodes and edges for shared files
+        for physical_file, accessors in file_sharing_map.items():
+            if len(accessors) > 1:  # Only show if file is shared
+                file_node = f"file_{physical_file.replace('-', '_').replace('.', '_')}"
+                dot_lines.append(f'  {file_node} [label="FILE\\n{physical_file}", shape=note, style=filled, fillcolor=lightyellow];')
+
+                # Link all programs that access this file
+                for accessor in accessors:
+                    program_name = accessor["program"]
+                    program_node = f"{program_name}_{'_'.join(program_name.split('_')[:2])}"  # Approximate first node
+                    dot_lines.append(f'  {program_node} -> {file_node} [style=dotted, color=brown, dir=both, label="I/O"];')
+
+        dot_lines.append("}")
+
+        return "\n".join(dot_lines)
+
+    def _parse_cobol_control_flow(
+        self,
+        lines: List[str],
+        symbols: List[SymbolInformation],
+        section_name: Optional[str],
+        collapse_fallthrough: bool
+    ) -> Dict[str, Any]:
+        """Parse COBOL source to extract control flow information."""
+        cfg = {
+            "nodes": [],
+            "edges": [],
+            "calls": [],
+            "performs": [],
+            "gotos": [],
+            "copybooks": [],        # COPY statements - compile-time includes
+            "dynamic_calls": [],    # CALL with variables - runtime determined
+            "entry_points": [],     # ENTRY statements - alternative entry points
+            "external_data": [],    # EXTERNAL data items - shared memory
+            "file_sharing": []      # SELECT statements - shared file access
+        }
+
+        current_section = None
+        current_paragraph = None
+
+        for i, line in enumerate(lines):
+            line_upper = line.upper().strip()
+
+            # Detect PROCEDURE DIVISION sections/paragraphs
+            if "SECTION" in line_upper and "." in line_upper:
+                current_section = line_upper.split()[0]
+                cfg["nodes"].append({
+                    "type": "section",
+                    "name": current_section,
+                    "line": i
+                })
+            elif line_upper and not line_upper.startswith(("*", "/")):
+                # Paragraph (standalone line ending with .)
+                if line_upper.endswith(".") and len(line_upper.split()) == 1:
+                    current_paragraph = line_upper.replace(".", "")
+                    cfg["nodes"].append({
+                        "type": "paragraph",
+                        "name": current_paragraph,
+                        "line": i
+                    })
+
+            # Detect CALL statements (both static and dynamic)
+            if "CALL" in line_upper:
+                # Static CALL with literal string
+                match = re.search(r'CALL\s+["\']([^"\']+)["\']', line_upper)
+                if match:
+                    called_program = match.group(1)
+                    cfg["calls"].append({
+                        "from": current_paragraph or current_section,
+                        "to": called_program,
+                        "line": i
+                    })
+                else:
+                    # Dynamic CALL with variable
+                    match = re.search(r'CALL\s+([A-Z0-9\-]+)', line_upper)
+                    if match and not match.group(1).startswith('"'):
+                        variable_name = match.group(1)
+                        cfg["dynamic_calls"].append({
+                            "from": current_paragraph or current_section,
+                            "variable": variable_name,
+                            "line": i
+                        })
+
+            # Detect PERFORM statements
+            if "PERFORM" in line_upper:
+                match = re.search(r'PERFORM\s+([A-Z0-9\-]+)', line_upper)
+                if match:
+                    target = match.group(1)
+                    cfg["performs"].append({
+                        "from": current_paragraph or current_section,
+                        "to": target,
+                        "line": i
+                    })
+                    cfg["edges"].append({
+                        "from": current_paragraph or current_section,
+                        "to": target,
+                        "type": "perform"
+                    })
+
+            # Detect GO TO statements
+            if "GO TO" in line_upper or "GOTO" in line_upper:
+                match = re.search(r'GO\s*TO\s+([A-Z0-9\-]+)', line_upper)
+                if match:
+                    target = match.group(1)
+                    cfg["gotos"].append({
+                        "from": current_paragraph or current_section,
+                        "to": target,
+                        "line": i
+                    })
+                    cfg["edges"].append({
+                        "from": current_paragraph or current_section,
+                        "to": target,
+                        "type": "goto"
+                    })
+
+            # Detect COPY statements (copybooks)
+            if "COPY" in line_upper and not line_upper.startswith("*"):
+                # COPY COPYBOOK-NAME [IN/OF LIBRARY]
+                match = re.search(r'COPY\s+([A-Z0-9\-]+)', line_upper)
+                if match:
+                    copybook_name = match.group(1)
+                    # Extract library if present
+                    lib_match = re.search(r'(?:IN|OF)\s+([A-Z0-9\-]+)', line_upper)
+                    library = lib_match.group(1) if lib_match else None
+
+                    cfg["copybooks"].append({
+                        "name": copybook_name,
+                        "library": library,
+                        "line": i,
+                        "context": current_section or "DATA-DIVISION"
+                    })
+
+            # Detect ENTRY statements (alternative entry points)
+            if "ENTRY" in line_upper and not line_upper.startswith("*"):
+                match = re.search(r'ENTRY\s+["\']([^"\']+)["\']', line_upper)
+                if match:
+                    entry_name = match.group(1)
+                    cfg["entry_points"].append({
+                        "name": entry_name,
+                        "line": i,
+                        "context": current_paragraph or current_section
+                    })
+
+            # Detect EXTERNAL data items
+            if "EXTERNAL" in line_upper and not line_upper.startswith("*"):
+                # Look for data item name (typically 01 level or variable declaration)
+                data_match = re.search(r'(\d{2})\s+([A-Z0-9\-]+).*EXTERNAL', line_upper)
+                if data_match:
+                    level = data_match.group(1)
+                    data_name = data_match.group(2)
+                    cfg["external_data"].append({
+                        "name": data_name,
+                        "level": level,
+                        "line": i,
+                        "context": current_section or "DATA-DIVISION"
+                    })
+
+            # Detect SELECT statements (file sharing)
+            if "SELECT" in line_upper and "ASSIGN" in line_upper:
+                # SELECT FILE-NAME ASSIGN TO "physical-file"
+                select_match = re.search(r'SELECT\s+([A-Z0-9\-]+)', line_upper)
+                assign_match = re.search(r'ASSIGN\s+TO\s+["\']?([^"\'.\s]+)', line_upper)
+
+                if select_match:
+                    file_name = select_match.group(1)
+                    physical_file = assign_match.group(1) if assign_match else None
+
+                    cfg["file_sharing"].append({
+                        "logical_name": file_name,
+                        "physical_file": physical_file,
+                        "line": i
+                    })
+
+        # Filter by section if specified
+        if section_name:
+            cfg = self._filter_cfg_by_section(cfg, section_name)
+
+        return cfg
+
+    def _filter_cfg_by_section(self, cfg: Dict[str, Any], section_name: str) -> Dict[str, Any]:
+        """Filter CFG to show only specified section."""
+        filtered = {
+            "nodes": [n for n in cfg["nodes"] if n["name"] == section_name or
+                     any(e["from"] == section_name for e in cfg["edges"])],
+            "edges": [e for e in cfg["edges"] if e["from"] == section_name],
+            "calls": [c for c in cfg["calls"] if c["from"] == section_name],
+            "performs": [p for p in cfg["performs"] if p["from"] == section_name],
+            "gotos": [g for g in cfg["gotos"] if g["from"] == section_name],
+            "copybooks": [cb for cb in cfg["copybooks"] if cb["context"] == section_name],
+            "dynamic_calls": [dc for dc in cfg["dynamic_calls"] if dc["from"] == section_name],
+            "entry_points": [ep for ep in cfg["entry_points"] if ep["context"] == section_name],
+            "external_data": cfg["external_data"],  # Keep all - global scope
+            "file_sharing": cfg["file_sharing"]     # Keep all - global scope
+        }
+        return filtered
+
+    def _format_cfg_as_dot(self, cfg: Dict[str, Any]) -> Dict[str, Any]:
+        """Format CFG as Graphviz DOT format."""
+        dot_lines = [
+            "digraph COBOL_CFG {",
+            "  rankdir=TB;",
+            "  node [shape=box, style=rounded];"
+        ]
+
+        # Add nodes
+        for node in cfg["nodes"]:
+            node_id = node["name"].replace("-", "_")
+            label = f"{node['name']} (L{node['line']})"
+            shape = "rectangle" if node["type"] == "section" else "ellipse"
+            dot_lines.append(f'  {node_id} [label="{label}", shape={shape}];')
+
+        # Add edges
+        for edge in cfg["edges"]:
+            from_id = edge["from"].replace("-", "_")
+            to_id = edge["to"].replace("-", "_")
+            style = "dashed" if edge["type"] == "perform" else "solid"
+            dot_lines.append(f'  {from_id} -> {to_id} [style={style}, label="{edge["type"]}"];')
+
+        dot_lines.append("}")
+
+        return {
+            "format": "dot",
+            "dot_source": "\n".join(dot_lines),
+            "raw_cfg": cfg
+        }
+
+    def _format_cfg_as_arc(self, cfg: Dict[str, Any]) -> Dict[str, Any]:
+        """Format CFG as arc diagram data."""
+        # Arc diagram shows sections/paragraphs vertically with arcs showing flow
+        nodes = sorted(cfg["nodes"], key=lambda n: n["line"])
+
+        arcs = []
+        for edge in cfg["edges"]:
+            from_node = next((n for n in nodes if n["name"] == edge["from"]), None)
+            to_node = next((n for n in nodes if n["name"] == edge["to"]), None)
+
+            if from_node and to_node:
+                arcs.append({
+                    "from": edge["from"],
+                    "to": edge["to"],
+                    "from_line": from_node["line"],
+                    "to_line": to_node["line"],
+                    "type": edge["type"],
+                    "direction": "forward" if to_node["line"] > from_node["line"] else "backward"
+                })
+
+        return {
+            "format": "arc",
+            "nodes": nodes,
+            "arcs": arcs,
+            "raw_cfg": cfg
+        }
+
     def cleanup(self) -> None:
         """Cleanup all language server instances."""
         for lang, server in self._lsp_instances.items():
@@ -584,10 +1162,10 @@ class LSPManager:
                 pass
             except Exception as e:
                 self.logger.log(f"Error cleaning up {lang} server: {e}", logging.ERROR)
-        
+
         self._lsp_instances.clear()
         self._async_instances.clear()
-        
+
         # Save session before cleanup
         try:
             self.save_session()

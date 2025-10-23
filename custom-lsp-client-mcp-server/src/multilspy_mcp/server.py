@@ -430,6 +430,227 @@ def load_session(
         }
 
 
+@mcp.tool(
+    name="cobol_generate_cfg_file",
+    description="Generate Control-Flow Graph (CFG) for a COBOL source file"
+)
+def generate_cobol_cfg_file(
+    file_path: str = Field(..., description="Relative path to the COBOL file"),
+    section_name: Optional[str] = Field(None, description="Specific section/paragraph to analyze (optional, analyzes entire program if not specified)"),
+    output_format: str = Field("dot", description="Output format: 'dot' (Graphviz), 'json', or 'arc' (arc diagram)"),
+    collapse_fallthrough: bool = Field(False, description="Collapse sequential fallthrough statements"),
+    output_file: Optional[str] = Field(None, description="Path to save CFG file (optional, returns data if not specified)")
+) -> Dict[str, Any]:
+    """
+    Generate Control-Flow Graph for a COBOL source file.
+
+    This tool analyzes the control flow of a COBOL program and generates a graph
+    showing the flow of execution through procedures, sections, paragraphs,
+    PERFORM statements, CALL statements, and GO TO statements.
+
+    The CFG helps understand:
+    - Program structure and logic flow
+    - Procedure calls and dependencies
+    - Branching and loop structures
+    - Entry and exit points
+
+    Output formats:
+    - 'dot': Graphviz DOT format (can be visualized with Graphviz tools)
+    - 'json': Structured JSON format with nodes and edges
+    - 'arc': Arc diagram format showing vertical flow with arcs
+    """
+    try:
+        if not lsp_manager:
+            initialize_lsp_manager()
+
+        # Generate CFG using LSP manager
+        cfg_data = lsp_manager.generate_cobol_cfg(
+            file_path=file_path,
+            section_name=section_name,
+            output_format=output_format,
+            collapse_fallthrough=collapse_fallthrough
+        )
+
+        saved_file = None
+
+        # Save to file if output_file is specified
+        if output_file:
+            # Strip /workspace prefix if present (container path)
+            output_file_str = str(output_file)
+            if output_file_str.startswith("/workspace/"):
+                output_file_str = output_file_str[len("/workspace/"):]
+
+            output_path = Path(output_file_str)
+            if not output_path.is_absolute():
+                output_path = lsp_manager.workspace_root / output_path
+
+            logger.info(f"Resolved output file path: {output_path}")
+
+            # Create parent directory if needed
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+
+            # Write content based on format
+            if output_format == "dot":
+                content = cfg_data.get("dot_source", "")
+            elif output_format == "json":
+                content = json.dumps(cfg_data, indent=2)
+            elif output_format == "arc":
+                content = json.dumps(cfg_data, indent=2)
+            else:
+                raise ValueError(f"Unsupported output format: {output_format}")
+
+            logger.info(f"Writing {len(content)} bytes to {output_path}")
+            with open(output_path, 'w') as f:
+                f.write(content)
+            saved_file = str(output_path)
+            logger.info(f"Successfully wrote file: {output_path}")
+
+        return {
+            "success": True,
+            "file_path": file_path,
+            "section": section_name or "entire program",
+            "format": output_format,
+            "output_file": saved_file,
+            "cfg": cfg_data if not output_file else None,
+            "message": f"CFG generated and saved to {saved_file}" if saved_file else "CFG generated successfully"
+        }
+    except Exception as e:
+        logger.error(f"Error generating CFG for file: {str(e)}")
+        return {
+            "success": False,
+            "file_path": file_path,
+            "error": str(e)
+        }
+
+
+@mcp.tool(
+    name="cobol_generate_cfg_project",
+    description="Generate Control-Flow Graphs (CFG) for all COBOL files in the project"
+)
+def generate_cobol_cfg_project(
+    file_pattern: Optional[str] = Field(None, description="Glob pattern to filter COBOL files (e.g., '*.COB', 'src/**/*.cbl')"),
+    output_format: str = Field("dot", description="Output format: 'dot' (Graphviz), 'json', or 'arc' (arc diagram)"),
+    include_calls: bool = Field(True, description="Include inter-program CALL relationships"),
+    collapse_fallthrough: bool = Field(False, description="Collapse sequential fallthrough statements"),
+    output_dir: Optional[str] = Field(None, description="Directory to save CFG files (optional, returns data if not specified)"),
+    generate_combined: bool = Field(False, description="Generate a combined CFG showing all programs and their CALL relationships (only for 'dot' format)")
+) -> Dict[str, Any]:
+    """
+    Generate Control-Flow Graphs for all COBOL files in the project.
+
+    This tool analyzes the entire COBOL project and generates CFGs for all
+    COBOL source files, optionally including inter-program relationships via
+    CALL statements. This provides a comprehensive view of the project's
+    control flow and dependencies.
+
+    The project CFG helps understand:
+    - Overall project structure
+    - Program dependencies (CALL graph)
+    - Entry points and main programs
+    - Shared procedures and utilities
+
+    Output formats:
+    - 'dot': Graphviz DOT format for each file
+    - 'json': Structured JSON format with full project data
+    - 'arc': Arc diagram format for each file
+
+    The tool will scan for COBOL files matching common extensions:
+    .cob, .COB, .cbl, .CBL, .cpy, .CPY
+    """
+    try:
+        if not lsp_manager:
+            initialize_lsp_manager()
+
+        # Generate project-wide CFG
+        project_cfg = lsp_manager.generate_cobol_project_cfg(
+            file_pattern=file_pattern,
+            output_format=output_format,
+            include_calls=include_calls,
+            collapse_fallthrough=collapse_fallthrough
+        )
+
+        saved_files = []
+
+        # Save to files if output_dir is specified
+        if output_dir:
+            # Strip /workspace prefix if present (container path)
+            output_dir_str = str(output_dir)
+            if output_dir_str.startswith("/workspace/"):
+                output_dir_str = output_dir_str[len("/workspace/"):]
+
+            output_path = Path(output_dir_str)
+            if not output_path.is_absolute():
+                output_path = lsp_manager.workspace_root / output_path
+
+            logger.info(f"Resolved output directory: {output_path}")
+            logger.info(f"Creating output directory: {output_path}")
+            output_path.mkdir(parents=True, exist_ok=True)
+
+            # Save individual CFG files
+            for file_data in project_cfg.get("files", []):
+                file_path = file_data["file_path"]
+                cfg = file_data["cfg"]
+
+                # Create output filename
+                base_name = Path(file_path).stem
+                if output_format == "dot":
+                    out_file = output_path / f"{base_name}.dot"
+                    content = cfg.get("dot_source", "")
+                elif output_format == "json":
+                    out_file = output_path / f"{base_name}.json"
+                    content = json.dumps(cfg, indent=2)
+                elif output_format == "arc":
+                    out_file = output_path / f"{base_name}_arc.json"
+                    content = json.dumps(cfg, indent=2)
+                else:
+                    logger.warning(f"Skipping unknown format: {output_format}")
+                    continue
+
+                # Write file
+                logger.info(f"Writing CFG to: {out_file} ({len(content)} bytes)")
+                with open(out_file, 'w') as f:
+                    f.write(content)
+                saved_files.append(str(out_file))
+                logger.info(f"Successfully wrote: {out_file}")
+
+            # Save project-level call graph if available
+            if "call_graph" in project_cfg:
+                call_graph_file = output_path / "call_graph.json"
+                with open(call_graph_file, 'w') as f:
+                    json.dump(project_cfg["call_graph"], f, indent=2)
+                saved_files.append(str(call_graph_file))
+
+            # Generate combined CFG if requested (only for DOT format)
+            if generate_combined and output_format == "dot":
+                logger.info("Generating combined project CFG...")
+                combined_dot = lsp_manager.generate_combined_cfg_dot(project_cfg)
+                combined_file = output_path / "project_combined.dot"
+
+                logger.info(f"Writing combined CFG to: {combined_file} ({len(combined_dot)} bytes)")
+                with open(combined_file, 'w') as f:
+                    f.write(combined_dot)
+                saved_files.append(str(combined_file))
+                logger.info(f"Successfully wrote combined CFG: {combined_file}")
+
+        return {
+            "success": True,
+            "workspace_root": str(lsp_manager.workspace_root),
+            "file_pattern": file_pattern or "**/*.{cob,cbl,cpy,CBL,COB,CPY}",
+            "format": output_format,
+            "file_count": len(project_cfg.get("files", [])),
+            "output_dir": str(output_dir) if output_dir else None,
+            "saved_files": saved_files if output_dir else [],
+            "cfg_data": project_cfg if not output_dir else None,
+            "message": f"Project CFG generated successfully. Saved {len(saved_files)} files." if output_dir else "Project CFG generated successfully"
+        }
+    except Exception as e:
+        logger.error(f"Error generating project CFG: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+
 # Initialize on import if WORKSPACE_ROOT is set
 if os.environ.get("WORKSPACE_ROOT"):
     try:

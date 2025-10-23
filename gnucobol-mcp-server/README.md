@@ -175,6 +175,7 @@ Generates detailed code analysis including symbol table and cross-reference list
 - `file_path` (string, required): Path to the COBOL source file (absolute or relative)
 - `include_symbols` (boolean, optional): Include symbol table in listing (default: true)
 - `include_xref` (boolean, optional): Include cross-reference in listing (default: true)
+- `copybook_paths` (array, optional): List of directories to search for COPY files (adds `-I` flags)
 - `options` (array, optional): Additional compiler options
 
 **Example:**
@@ -184,7 +185,8 @@ Generates detailed code analysis including symbol table and cross-reference list
   "arguments": {
     "file_path": "/workspace/programs/calculator.cob",
     "include_symbols": true,
-    "include_xref": true
+    "include_xref": true,
+    "copybook_paths": ["/workspace/copybooks"]
   }
 }
 ```
@@ -270,7 +272,85 @@ Compiles multiple COBOL source files in a single batch operation.
 }
 ```
 
-### 5. get_compiler_info
+### 5. compile_project
+
+Compiles an entire COBOL project from a directory into a single output file (executable or shared library). This tool discovers all COBOL files in a directory and compiles them together using GnuCOBOL's project compilation features, which is more efficient than compiling files individually and properly handles inter-file dependencies.
+
+**Arguments:**
+- `directory` (string, required): Directory path containing COBOL source files
+- `output_name` (string, required): Name for the output file (executable or module)
+- `output_type` (string, optional): Type of output - "executable" or "module" (default: "executable")
+- `copybook_paths` (array, optional): List of directories to search for COPY files (adds `-I` flags)
+- `library_paths` (array, optional): List of directories to search for libraries (adds `-L` flags)
+- `recursive` (boolean, optional): Search subdirectories recursively for COBOL files (default: true)
+- `options` (array, optional): Additional compiler options (e.g., `["-Wall", "-O2"]`)
+
+**Example - Compile project to executable:**
+```json
+{
+  "name": "compile_project",
+  "arguments": {
+    "directory": "/workspace/cobol-app",
+    "output_name": "myapp",
+    "output_type": "executable",
+    "copybook_paths": ["/workspace/cobol-app/copybooks"],
+    "recursive": true,
+    "options": ["-Wall", "-O2"]
+  }
+}
+```
+
+**Example - Compile project to shared library:**
+```json
+{
+  "name": "compile_project",
+  "arguments": {
+    "directory": "/workspace/cobol-lib",
+    "output_name": "libcobol.so",
+    "output_type": "module",
+    "copybook_paths": ["/workspace/cobol-lib/copy"],
+    "library_paths": ["/usr/local/lib"]
+  }
+}
+```
+
+**Returns:**
+```json
+{
+  "success": true,
+  "directory": "/workspace/cobol-app",
+  "output_name": "myapp",
+  "output_type": "executable",
+  "files_compiled": 15,
+  "file_list": [
+    "/workspace/cobol-app/main.cob",
+    "/workspace/cobol-app/src/customer.cob",
+    "/workspace/cobol-app/src/invoice.cob",
+    "..."
+  ],
+  "stdout": "",
+  "stderr": "",
+  "return_code": 0,
+  "command": "cobc -x -o /tmp/.../myapp -I /workspace/cobol-app/copybooks /workspace/cobol-app/main.cob ...",
+  "message": "Successfully compiled 15 files into executable: myapp"
+}
+```
+
+**Key Features:**
+- **Automatic File Discovery**: Finds all COBOL files (.cob, .cbl, .COB, .CBL) in directory tree
+- **Single Compilation**: Compiles all files together (more efficient than batch_compile)
+- **Dependency Handling**: GnuCOBOL automatically resolves CALL dependencies between files
+- **Copybook Support**: Specify directories for COPY statement resolution with `-I` flags
+- **Library Linking**: Link external libraries with `-L` and `-l` flags
+- **Flexible Output**: Create executables (`-x`) or shared libraries (`-b`)
+
+**Use Cases:**
+1. **Multi-file Projects**: Compile entire COBOL application with multiple source files
+2. **Library Creation**: Build shared libraries from multiple COBOL modules
+3. **Build Automation**: Integrate into CI/CD pipelines for automated builds
+4. **Dependency Management**: Let GnuCOBOL handle inter-file CALL statements
+
+### 6. get_compiler_info
 
 Returns information about the GnuCOBOL compiler installation.
 
@@ -294,6 +374,139 @@ Returns information about the GnuCOBOL compiler installation.
   }
 }
 ```
+
+### 7. batch_analyze
+
+Analyzes multiple COBOL source files and extracts project-level semantic relationships, including inter-file dependencies, CALL statements, and COPY/INCLUDE references. This tool provides comprehensive insights into how COBOL programs interact within a project.
+
+You can provide either specific file paths OR a directory containing COBOL files. When using directory mode, the tool automatically discovers all COBOL files (.cob, .cbl, .COB, .CBL) recursively and filters out non-COBOL files like README, Makefiles, etc.
+
+**Arguments:**
+- `file_paths` (array, optional): Array of paths to COBOL source files (required if `directory` not provided)
+- `directory` (string, optional): Directory path to scan for COBOL files (required if `file_paths` not provided)
+- `recursive` (boolean, optional): When using `directory`, search subdirectories recursively (default: true)
+- `copybook_paths` (array, optional): List of directories to search for COPY files (adds `-I` flags)
+- `include_symbols` (boolean, optional): Include symbol table analysis (default: true)
+- `include_xref` (boolean, optional): Include cross-reference analysis (default: true)
+
+**Example with file_paths:**
+```json
+{
+  "name": "batch_analyze",
+  "arguments": {
+    "file_paths": [
+      "/workspace/programs/MAIN.cob",
+      "/workspace/programs/CUSTOMER.cob",
+      "/workspace/programs/INVENTORY.cob"
+    ],
+    "include_symbols": true,
+    "include_xref": true
+  }
+}
+```
+
+**Example with directory (recommended for projects):**
+```json
+{
+  "name": "batch_analyze",
+  "arguments": {
+    "directory": "/workspace/cobol-project",
+    "recursive": true
+  }
+}
+```
+
+This will automatically discover all COBOL files in the directory tree:
+- `/workspace/cobol-project/MAIN.cob`
+- `/workspace/cobol-project/src/CUSTOMER.cob`
+- `/workspace/cobol-project/src/utils/LOGGER.cob`
+- `/workspace/cobol-project/lib/FILEIO.CBL`
+
+**Example with non-recursive directory scan:**
+```json
+{
+  "name": "batch_analyze",
+  "arguments": {
+    "directory": "/workspace/programs",
+    "recursive": false
+  }
+}
+```
+
+This only analyzes COBOL files in the immediate directory, skipping subdirectories.
+
+**Returns:**
+```json
+{
+  "total_files": 3,
+  "successful": 3,
+  "failed": 0,
+  "programs": ["MAIN", "CUSTOMER", "INVENTORY"],
+  "program_calls": {
+    "MAIN": ["CUSTOMER", "INVENTORY"],
+    "CUSTOMER": [],
+    "INVENTORY": []
+  },
+  "copybook_usage": {
+    "MAIN": ["SQLCA", "CUSTCOPY"],
+    "CUSTOMER": ["SQLCA", "CUSTCOPY"],
+    "INVENTORY": ["SQLCA", "INVCOPY"]
+  },
+  "call_summary": {
+    "total_calls": 2,
+    "unique_programs": ["CUSTOMER", "INVENTORY"],
+    "call_graph": [
+      {"caller": "MAIN", "callee": "CUSTOMER", "type": "external_call"},
+      {"caller": "MAIN", "callee": "INVENTORY", "type": "external_call"}
+    ]
+  },
+  "copybook_summary": {
+    "total_includes": 5,
+    "unique_copybooks": ["SQLCA", "CUSTCOPY", "INVCOPY"],
+    "dependencies": [
+      {"program": "MAIN", "copybook": "SQLCA", "type": "include"},
+      {"program": "MAIN", "copybook": "CUSTCOPY", "type": "include"},
+      {"program": "CUSTOMER", "copybook": "SQLCA", "type": "include"},
+      {"program": "CUSTOMER", "copybook": "CUSTCOPY", "type": "include"},
+      {"program": "INVENTORY", "copybook": "SQLCA", "type": "include"},
+      {"program": "INVENTORY", "copybook": "INVCOPY", "type": "include"}
+    ]
+  },
+  "per_file_analysis": [
+    {
+      "file_path": "/workspace/programs/MAIN.cob",
+      "program_id": "MAIN",
+      "success": true,
+      "listing": "... detailed listing ...",
+      "calls": [
+        {"program": "CUSTOMER", "type": "external_call"},
+        {"program": "INVENTORY", "type": "external_call"}
+      ],
+      "copybooks": [
+        {"copybook": "SQLCA", "type": "include"},
+        {"copybook": "CUSTCOPY", "type": "include"}
+      ]
+    }
+  ],
+  "message": "Batch analysis complete: 3 successful, 0 failed"
+}
+```
+
+**Use Cases:**
+
+1. **Dependency Mapping**: Understand which programs call other programs in your COBOL project
+2. **Impact Analysis**: Identify which programs are affected when modifying a copybook or called program
+3. **Architecture Visualization**: Generate call graphs and dependency diagrams for legacy systems
+4. **Code Migration**: Map inter-file dependencies before modernization or refactoring
+5. **Documentation**: Auto-generate project structure documentation with semantic relationships
+
+**Key Features:**
+
+- **Inter-File Relationships**: Discovers CALL statements to identify program-to-program dependencies
+- **Copybook Tracking**: Identifies all COPY/INCLUDE statements to map shared data structures
+- **Call Graph Generation**: Provides structured call graph data for visualization
+- **Semantic Aggregation**: Combines per-file analysis into project-level insights
+- **Hybrid Approach**: Leverages GnuCOBOL's native analysis with minimal Python aggregation
 
 ## Usage
 

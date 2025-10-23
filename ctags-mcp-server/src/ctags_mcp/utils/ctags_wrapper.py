@@ -46,47 +46,59 @@ class CTagsWrapper:
         recursive: bool = True,
         languages: Optional[List[str]] = None,
         exclude_patterns: Optional[List[str]] = None,
+        output_format: str = "u-ctags",
         extra_options: Optional[List[str]] = None
     ) -> Dict[str, Any]:
         """Generate tags file for given path.
-        
+
         Args:
             path: Path to index
             output_file: Output tags file
             recursive: Recursive indexing
             languages: Languages to include
             exclude_patterns: Patterns to exclude
+            output_format: Output format (u-ctags, e-ctags, etags, xref, json)
             extra_options: Extra ctags options
-            
+
         Returns:
             Dictionary with generation results
         """
         cmd = [self.ctags_binary]
-        
+
         # Add output file
         cmd.extend(["-f", output_file])
-        
+
+        # Add output format
+        if output_format and output_format != "u-ctags":
+            if output_format == "etags":
+                cmd.append("-e")
+            elif output_format == "xref":
+                cmd.append("-x")
+            elif output_format in ["e-ctags", "json"]:
+                cmd.extend(["--output-format=" + output_format])
+
         # Add recursive flag
         if recursive:
             cmd.append("-R")
-        
+
         # Add language filters
         if languages:
             lang_str = ",".join(languages)
             cmd.extend(["--languages=" + lang_str])
-        
+
         # Add exclude patterns
         if exclude_patterns:
             for pattern in exclude_patterns:
                 cmd.extend(["--exclude=" + pattern])
-        
+
         # Add extra options
         if extra_options:
             cmd.extend(extra_options)
-        
-        # Add fields for better tag information
-        cmd.extend(["--fields=+KSn", "--extras=+q"])
-        
+
+        # Add fields for better tag information (not applicable for xref format)
+        if output_format != "xref":
+            cmd.extend(["--fields=+KSn", "--extras=+q"])
+
         # Add the path to index
         cmd.append(path)
         
@@ -98,19 +110,28 @@ class CTagsWrapper:
                 text=True,
                 timeout=60
             )
-            
+
             if result.returncode == 0:
-                # Count tags generated
-                tag_count = 0
-                if os.path.exists(output_file):
-                    with open(output_file, 'r') as f:
-                        tag_count = sum(1 for line in f if not line.startswith('!'))
-                
+                # For xref format, output goes to stdout, so we need to save it to file
+                if output_format == "xref":
+                    with open(output_file, 'w') as f:
+                        f.write(result.stdout)
+
+                    # Count lines in xref output (each line is an entry)
+                    tag_count = len([line for line in result.stdout.strip().split('\n') if line.strip()])
+                else:
+                    # Count tags generated from file
+                    tag_count = 0
+                    if os.path.exists(output_file):
+                        with open(output_file, 'r') as f:
+                            tag_count = sum(1 for line in f if not line.startswith('!'))
+
                 return {
                     "success": True,
                     "tags_file": os.path.abspath(output_file),
                     "tag_count": tag_count,
-                    "command": " ".join(cmd)
+                    "command": " ".join(cmd),
+                    "format": output_format
                 }
             else:
                 return {
@@ -314,22 +335,82 @@ class CTagsWrapper:
             "pattern": decode_if_bytes(entry['pattern']) if entry['pattern'] else None
         }
     
-    def get_tags_info(self, tags_file: str) -> Dict[str, Any]:
-        """Get information about a tags file.
-        
+    def get_all_files_from_tags(self, tags_file: str) -> List[str]:
+        """Get list of all unique files referenced in tags file.
+
         Args:
             tags_file: Path to tags file
-            
+
+        Returns:
+            List of unique file paths
+        """
+        tag_file = self.open_tags_file(tags_file)
+        if not tag_file:
+            return []
+
+        files = set()
+        entry = TagEntry()
+
+        try:
+            if tag_file.first(entry):
+                while True:
+                    file_path = entry['file']
+                    if isinstance(file_path, bytes):
+                        file_path = file_path.decode('utf-8', errors='ignore')
+                    if file_path:
+                        files.add(file_path)
+
+                    if not tag_file.next(entry):
+                        break
+        except Exception as e:
+            logger.error(f"Error reading files from tags: {e}")
+
+        return sorted(list(files))
+
+    def get_all_symbols_from_tags(self, tags_file: str) -> List[Dict[str, Any]]:
+        """Get all symbols from tags file.
+
+        Args:
+            tags_file: Path to tags file
+
+        Returns:
+            List of all symbols
+        """
+        tag_file = self.open_tags_file(tags_file)
+        if not tag_file:
+            return []
+
+        symbols = []
+        entry = TagEntry()
+
+        try:
+            if tag_file.first(entry):
+                while True:
+                    symbols.append(self._entry_to_dict(entry))
+
+                    if not tag_file.next(entry):
+                        break
+        except Exception as e:
+            logger.error(f"Error reading symbols from tags: {e}")
+
+        return symbols
+
+    def get_tags_info(self, tags_file: str) -> Dict[str, Any]:
+        """Get information about a tags file.
+
+        Args:
+            tags_file: Path to tags file
+
         Returns:
             Tags file information
         """
         if not os.path.exists(tags_file):
             return {"error": "Tags file not found"}
-        
+
         tag_file = self.open_tags_file(tags_file)
         if not tag_file:
             return {"error": "Failed to open tags file"}
-        
+
         try:
             info = {
                 "file": os.path.abspath(tags_file),
@@ -341,7 +422,7 @@ class CTagsWrapper:
                 "url": tag_file['url'] or "",
                 "version": tag_file['version'] or ""
             }
-            
+
             # Count tags
             tag_count = 0
             entry = TagEntry()
@@ -349,8 +430,190 @@ class CTagsWrapper:
                 tag_count = 1
                 while tag_file.next(entry):
                     tag_count += 1
-            
+
             info['tag_count'] = tag_count
             return info
         except Exception as e:
+            return {"error": str(e)}
+
+    def generate_cross_reference(
+        self,
+        path: str,
+        recursive: bool = False,
+        languages: Optional[List[str]] = None,
+        exclude_patterns: Optional[List[str]] = None
+    ) -> List[Dict[str, Any]]:
+        """Generate cross-reference output for a file or directory.
+
+        Args:
+            path: Path to file or directory to generate xref for
+            recursive: Recursively process directories (default: False)
+            languages: Languages to filter
+            exclude_patterns: Patterns to exclude from indexing
+
+        Returns:
+            List of cross-reference entries
+        """
+        cmd = [self.ctags_binary, "-x"]
+
+        # Add recursive flag if processing directory
+        if recursive:
+            cmd.append("-R")
+
+        # Add language filters
+        if languages:
+            lang_str = ",".join(languages)
+            cmd.extend(["--languages=" + lang_str])
+
+        # Add exclude patterns
+        if exclude_patterns:
+            for pattern in exclude_patterns:
+                cmd.extend(["--exclude=" + pattern])
+
+        cmd.append(path)
+
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=60
+            )
+
+            if result.returncode == 0:
+                # Parse xref output
+                entries = []
+                is_single_file = os.path.isfile(path)
+
+                for line in result.stdout.strip().split('\n'):
+                    if line:
+                        # xref format depends on single vs multi-file:
+                        # Single file: name kind line pattern
+                        # Multi-file: name kind line file pattern
+                        parts = line.split(maxsplit=4)
+
+                        if is_single_file and len(parts) >= 3:
+                            # Single file format
+                            entries.append({
+                                "name": parts[0],
+                                "kind": parts[1],
+                                "line": int(parts[2]) if parts[2].isdigit() else 0,
+                                "file": path,
+                                "pattern": parts[3] if len(parts) > 3 else ""
+                            })
+                        elif not is_single_file and len(parts) >= 4:
+                            # Multi-file format
+                            entries.append({
+                                "name": parts[0],
+                                "kind": parts[1],
+                                "line": int(parts[2]) if parts[2].isdigit() else 0,
+                                "file": parts[3],
+                                "pattern": parts[4] if len(parts) > 4 else ""
+                            })
+                return entries
+            else:
+                logger.error(f"Cross-reference generation failed: {result.stderr}")
+                return []
+        except Exception as e:
+            logger.error(f"Error generating cross-reference: {e}")
+            return []
+
+    def detect_language(self, file_path: str) -> Optional[str]:
+        """Detect the language of a file.
+
+        Args:
+            file_path: Path to file
+
+        Returns:
+            Detected language name or None
+        """
+        cmd = [self.ctags_binary, "--print-language", file_path]
+
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+
+            if result.returncode == 0:
+                return result.stdout.strip()
+            return None
+        except Exception as e:
+            logger.error(f"Error detecting language: {e}")
+            return None
+
+    def list_languages(self) -> List[str]:
+        """List all supported languages.
+
+        Returns:
+            List of language names
+        """
+        cmd = [self.ctags_binary, "--list-languages"]
+
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+
+            if result.returncode == 0:
+                return [lang.strip() for lang in result.stdout.strip().split('\n') if lang.strip()]
+            return []
+        except Exception as e:
+            logger.error(f"Error listing languages: {e}")
+            return []
+
+    def list_tag_kinds(self, language: str) -> Dict[str, Any]:
+        """List tag kinds for a specific language.
+
+        Args:
+            language: Language name
+
+        Returns:
+            Dictionary with kind information
+        """
+        cmd = [self.ctags_binary, "--list-kinds-full=" + language]
+
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+
+            if result.returncode == 0:
+                kinds = {}
+                lines = result.stdout.strip().split('\n')
+
+                # Skip header line if present
+                start_idx = 1 if lines and ('LETTER' in lines[0] or 'NAME' in lines[0]) else 0
+
+                for line in lines[start_idx:]:
+                    if line.strip():
+                        # Format: LETTER NAME ENABLED REFONLY NROLES MASTER DESCRIPTION
+                        parts = line.split(maxsplit=6)
+                        if len(parts) >= 3:
+                            letter = parts[0]
+                            name = parts[1]
+                            enabled = parts[2] == 'yes' if len(parts) > 2 else True
+                            description = parts[6] if len(parts) > 6 else ""
+
+                            kinds[letter] = {
+                                "name": name,
+                                "enabled": enabled,
+                                "description": description
+                            }
+                return {
+                    "language": language,
+                    "kinds": kinds
+                }
+            else:
+                return {"error": f"Language '{language}' not found or not supported"}
+        except Exception as e:
+            logger.error(f"Error listing tag kinds: {e}")
             return {"error": str(e)}

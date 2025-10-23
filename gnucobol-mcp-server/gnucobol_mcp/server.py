@@ -113,6 +113,128 @@ def validate_cobol_code(code: str) -> None:
         raise ValueError("COBOL code exceeds maximum size of 1MB")
 
 
+def parse_call_statements(listing: str, source_code: str) -> List[Dict[str, Any]]:
+    """
+    Parse CALL statements from COBOL listing and source code.
+
+    Extracts external program calls from the source code.
+
+    Args:
+        listing: GnuCOBOL listing output
+        source_code: Original COBOL source code
+
+    Returns:
+        List of dictionaries containing call information
+    """
+    import re
+
+    calls = []
+
+    # Pattern to match CALL statements in COBOL
+    # Matches: CALL 'PROGRAM-NAME' or CALL "PROGRAM-NAME" or CALL IDENTIFIER
+    call_pattern = r"CALL\s+['\"]([A-Z0-9\-_]+)['\"]"
+
+    for match in re.finditer(call_pattern, source_code, re.IGNORECASE):
+        program_name = match.group(1)
+        calls.append({
+            "program": program_name,
+            "type": "external_call"
+        })
+
+    return calls
+
+
+def parse_copy_statements(listing: str, source_code: str) -> List[Dict[str, Any]]:
+    """
+    Parse COPY statements from COBOL listing and source code.
+
+    Extracts copybook dependencies from the source code.
+
+    Args:
+        listing: GnuCOBOL listing output
+        source_code: Original COBOL source code
+
+    Returns:
+        List of dictionaries containing copy information
+    """
+    import re
+
+    copies = []
+
+    # Pattern to match COPY statements in COBOL
+    # Matches: COPY 'COPYBOOK' or COPY "COPYBOOK" or COPY COPYBOOK
+    copy_pattern = r"COPY\s+(?:['\"]([A-Z0-9\-_\.]+)['\"]|([A-Z0-9\-_\.]+))"
+
+    for match in re.finditer(copy_pattern, source_code, re.IGNORECASE):
+        copybook_name = match.group(1) or match.group(2)
+        copies.append({
+            "copybook": copybook_name,
+            "type": "include"
+        })
+
+    return copies
+
+
+def extract_program_id(source_code: str) -> Optional[str]:
+    """
+    Extract PROGRAM-ID from COBOL source code.
+
+    Args:
+        source_code: COBOL source code
+
+    Returns:
+        Program ID if found, None otherwise
+    """
+    import re
+
+    # Pattern to match PROGRAM-ID
+    program_id_pattern = r"PROGRAM-ID\.\s+([A-Z0-9\-_]+)"
+
+    match = re.search(program_id_pattern, source_code, re.IGNORECASE)
+    if match:
+        return match.group(1)
+
+    return None
+
+
+def discover_cobol_files(directory_path: str, recursive: bool = True) -> List[str]:
+    """
+    Discover COBOL source files in a directory.
+
+    Looks for files with common COBOL extensions (.cob, .cbl, .CBL, .COB).
+
+    Args:
+        directory_path: Path to directory to search
+        recursive: Whether to search subdirectories recursively
+
+    Returns:
+        List of absolute paths to COBOL files found
+    """
+    cobol_extensions = {'.cob', '.cbl', '.COB', '.CBL'}
+    cobol_files = []
+
+    dir_path = Path(directory_path)
+
+    if not dir_path.exists():
+        return []
+
+    if not dir_path.is_dir():
+        return []
+
+    # Use glob to find files
+    if recursive:
+        # Recursively search all subdirectories
+        for ext in cobol_extensions:
+            cobol_files.extend(dir_path.rglob(f'*{ext}'))
+    else:
+        # Only search immediate directory
+        for ext in cobol_extensions:
+            cobol_files.extend(dir_path.glob(f'*{ext}'))
+
+    # Convert to absolute paths and sort
+    return sorted([str(f.absolute()) for f in cobol_files])
+
+
 async def _compile_cobol_code(
     code: str,
     output_name: str = "program",
@@ -439,6 +561,7 @@ async def _analyze_cobol_code(
     code: str,
     include_symbols: bool = True,
     include_xref: bool = True,
+    copybook_paths: Optional[List[str]] = None,
     options: Optional[List[str]] = None
 ) -> Dict[str, Any]:
     """
@@ -470,6 +593,11 @@ async def _analyze_cobol_code(
             # Add symbol table if requested
             if include_symbols:
                 analyze_args.append("-ftsymbols")
+
+            # Add copybook search paths (-I flags)
+            if copybook_paths:
+                for path in copybook_paths:
+                    analyze_args.extend(["-I", path])
 
             # Add listing generation flag with output file (-t requires a filename)
             analyze_args.extend(["-t", str(listing_file)])
@@ -551,6 +679,7 @@ async def analyze_cobol(
     file_path: str,
     include_symbols: bool = True,
     include_xref: bool = True,
+    copybook_paths: Optional[List[str]] = None,
     options: Optional[List[str]] = None
 ) -> Dict[str, Any]:
     """
@@ -564,6 +693,7 @@ async def analyze_cobol(
         file_path: Path to the COBOL source file (absolute or relative)
         include_symbols: Include symbol table in output
         include_xref: Include cross-reference listing
+        copybook_paths: List of directories to search for COPY files (adds -I flags)
         options: Additional compiler options
 
     Returns:
@@ -616,6 +746,7 @@ async def analyze_cobol(
             code=code,
             include_symbols=include_symbols,
             include_xref=include_xref,
+            copybook_paths=copybook_paths,
             options=options
         )
 
@@ -796,6 +927,160 @@ async def batch_compile(
 
 
 @app.tool()
+async def compile_project(
+    directory: str,
+    output_name: str,
+    output_type: str = "executable",
+    copybook_paths: Optional[List[str]] = None,
+    library_paths: Optional[List[str]] = None,
+    recursive: bool = True,
+    options: Optional[List[str]] = None
+) -> Dict[str, Any]:
+    """
+    Compile an entire COBOL project from a directory into a single output.
+
+    This tool discovers all COBOL files in a directory and compiles them together
+    using GnuCOBOL's project compilation features (cobc -b or cobc -x).
+    This is more efficient than compiling files individually and properly handles
+    inter-file dependencies.
+
+    Args:
+        directory: Directory path containing COBOL source files
+        output_name: Name for the output file (executable or module)
+        output_type: Type of output - "executable" (-x) or "module" (-b for shared library)
+        copybook_paths: List of directories to search for COPY files (adds -I flags)
+        library_paths: List of directories to search for libraries (adds -L flags)
+        recursive: Search subdirectories recursively for COBOL files (default: True)
+        options: Additional compiler options (e.g., ["-Wall", "-O2"])
+
+    Returns:
+        Dictionary containing:
+            - success: Whether compilation succeeded
+            - directory: Source directory that was compiled
+            - output_name: Name of the compiled output
+            - output_type: Type of output (executable or module)
+            - files_compiled: Number of COBOL files included
+            - file_list: List of files that were compiled
+            - stdout: Compiler standard output
+            - stderr: Compiler standard error
+            - return_code: Compiler exit code
+
+    Example:
+        >>> result = await compile_project(
+        ...     directory="/workspace/cobol-app",
+        ...     output_name="myapp",
+        ...     output_type="executable",
+        ...     copybook_paths=["/workspace/cobol-app/copybooks"],
+        ...     recursive=True
+        ... )
+    """
+    try:
+        # Validate output type
+        if output_type not in ["executable", "module"]:
+            return {
+                "success": False,
+                "error": "output_type must be 'executable' or 'module'",
+                "message": "Invalid output type"
+            }
+
+        # Discover COBOL files
+        cobol_files = discover_cobol_files(directory, recursive=recursive)
+
+        if not cobol_files:
+            return {
+                "success": False,
+                "error": f"No COBOL files found in directory: {directory}",
+                "message": "No COBOL files (.cob, .cbl, .COB, .CBL) found"
+            }
+
+        if len(cobol_files) > 100:
+            return {
+                "success": False,
+                "error": f"Too many files ({len(cobol_files)}). Maximum 100 files per project compilation.",
+                "message": "Project too large for single compilation"
+            }
+
+        # Create temporary directory for output
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            output_file = temp_path / output_name
+
+            # Build compiler arguments
+            compile_args = []
+
+            # Add output type flag
+            if output_type == "executable":
+                compile_args.append("-x")  # Build executable
+            else:
+                compile_args.append("-b")  # Build module/library
+
+            # Add output file
+            compile_args.extend(["-o", str(output_file)])
+
+            # Add copybook search paths (-I flags)
+            if copybook_paths:
+                for path in copybook_paths:
+                    compile_args.extend(["-I", path])
+
+            # Add library search paths (-L flags)
+            if library_paths:
+                for path in library_paths:
+                    compile_args.extend(["-L", path])
+
+            # Add user-provided options
+            if options:
+                compile_args.extend(options)
+
+            # Add all COBOL source files
+            compile_args.extend(cobol_files)
+
+            # Run compilation
+            result = await run_cobc_command(compile_args, timeout=120)  # Longer timeout for projects
+
+            success = result["return_code"] == 0
+
+            response = {
+                "success": success,
+                "directory": str(Path(directory).absolute()),
+                "output_name": output_name,
+                "output_type": output_type,
+                "files_compiled": len(cobol_files),
+                "file_list": cobol_files,
+                "stdout": result["stdout"],
+                "stderr": result["stderr"],
+                "return_code": result["return_code"],
+                "command": result["command"]
+            }
+
+            if success:
+                response["message"] = f"Successfully compiled {len(cobol_files)} files into {output_type}: {output_name}"
+            else:
+                response["message"] = f"Project compilation failed"
+                response["error"] = result["stderr"]
+
+            return response
+
+    except ValueError as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "message": "Invalid input"
+        }
+    except COBOLCompilerError as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "message": "Compiler error"
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "message": "Unexpected error during project compilation"
+        }
+
+
+@app.tool()
 async def get_compiler_info() -> Dict[str, Any]:
     """
     Get information about the GnuCOBOL compiler installation.
@@ -872,3 +1157,215 @@ async def health_check() -> Dict[str, Any]:
             "" if compiler_available else " (GnuCOBOL compiler not found)"
         )
     }
+
+
+@app.tool()
+async def batch_analyze(
+    file_paths: Optional[List[str]] = None,
+    directory: Optional[str] = None,
+    recursive: bool = True,
+    copybook_paths: Optional[List[str]] = None,
+    include_symbols: bool = True,
+    include_xref: bool = True
+) -> Dict[str, Any]:
+    """
+    Analyze multiple COBOL source files and extract project-level semantic relationships.
+
+    This tool runs GnuCOBOL analysis on each file, then aggregates the results to show:
+    - Program call relationships (which programs call which)
+    - Copybook dependencies (which files use which copybooks)
+    - Program-level summary
+
+    This provides project-level semantic analysis by leveraging GnuCOBOL's
+    per-file analysis capabilities.
+
+    You can either provide a list of specific file paths OR a directory to scan.
+    If directory is provided, it will automatically discover COBOL files (.cob, .cbl, .COB, .CBL).
+
+    Args:
+        file_paths: List of paths to COBOL source files (optional if directory is provided)
+        directory: Directory path to scan for COBOL files (optional if file_paths is provided)
+        recursive: When using directory, search subdirectories recursively (default: True)
+        copybook_paths: List of directories to search for COPY files (adds -I flags)
+        include_symbols: Include symbol tables in individual file analysis
+        include_xref: Include cross-reference in individual file analysis
+
+    Returns:
+        Dictionary containing:
+            - total_files: Number of files analyzed
+            - program_calls: Map of programs and what they call
+            - copybook_usage: Map of programs and copybooks they use
+            - programs: List of program IDs found
+            - per_file_analysis: Detailed analysis for each file
+            - call_summary: Summary of all external calls found
+            - copybook_summary: Summary of all copybooks referenced
+
+    Example with file_paths:
+        >>> result = await batch_analyze(
+        ...     file_paths=[
+        ...         "/workspace/src/MAIN.COB",
+        ...         "/workspace/src/CUSTOMER.COB"
+        ...     ]
+        ... )
+
+    Example with directory:
+        >>> result = await batch_analyze(
+        ...     directory="/workspace/src",
+        ...     recursive=True
+        ... )
+    """
+    try:
+        # Determine file list from either file_paths or directory
+        if directory:
+            # Use directory discovery
+            discovered_files = discover_cobol_files(directory, recursive=recursive)
+            if not discovered_files:
+                return {
+                    "total_files": 0,
+                    "error": f"No COBOL files found in directory: {directory}",
+                    "message": "No COBOL files (.cob, .cbl, .COB, .CBL) found in the specified directory"
+                }
+            file_paths = discovered_files
+        elif file_paths:
+            # Use provided file_paths
+            if not isinstance(file_paths, list):
+                raise ValueError("file_paths must be a list")
+        else:
+            raise ValueError("Either file_paths or directory must be provided")
+
+        if len(file_paths) > 50:
+            raise ValueError("Maximum 50 files allowed per batch analysis")
+
+        # Initialize result structures
+        program_calls = {}
+        copybook_usage = {}
+        programs = []
+        per_file_analysis = {}
+        all_calls = []
+        all_copybooks = []
+
+        # Analyze each file
+        for file_path in file_paths:
+            try:
+                # Validate file path
+                source_path = Path(file_path)
+
+                if not source_path.exists():
+                    per_file_analysis[file_path] = {
+                        "success": False,
+                        "error": "File not found"
+                    }
+                    continue
+
+                if not source_path.is_file():
+                    per_file_analysis[file_path] = {
+                        "success": False,
+                        "error": "Not a file"
+                    }
+                    continue
+
+                # Read source code
+                try:
+                    code = source_path.read_text(encoding="utf-8")
+                except UnicodeDecodeError:
+                    per_file_analysis[file_path] = {
+                        "success": False,
+                        "error": "File encoding error"
+                    }
+                    continue
+
+                # Extract program ID
+                program_id = extract_program_id(code)
+                if program_id:
+                    programs.append(program_id)
+
+                # Run GnuCOBOL analysis
+                analysis_result = await _analyze_cobol_code(
+                    code=code,
+                    include_symbols=include_symbols,
+                    include_xref=include_xref,
+                    copybook_paths=copybook_paths
+                )
+
+                # Parse CALL statements from source
+                calls = parse_call_statements(
+                    analysis_result.get("listing", ""),
+                    code
+                )
+
+                # Parse COPY statements from source
+                copies = parse_copy_statements(
+                    analysis_result.get("listing", ""),
+                    code
+                )
+
+                # Store per-file results
+                per_file_analysis[file_path] = {
+                    "success": analysis_result["success"],
+                    "program_id": program_id,
+                    "calls": calls,
+                    "copybooks": copies,
+                    "analysis_summary": {
+                        "has_errors": analysis_result.get("analysis", {}).get("has_errors", False),
+                        "has_warnings": analysis_result.get("analysis", {}).get("has_warnings", False)
+                    }
+                }
+
+                # Aggregate project-level data
+                if program_id:
+                    program_calls[program_id] = [call["program"] for call in calls]
+                    copybook_usage[program_id] = [copy["copybook"] for copy in copies]
+
+                all_calls.extend(calls)
+                all_copybooks.extend(copies)
+
+            except Exception as e:
+                per_file_analysis[file_path] = {
+                    "success": False,
+                    "error": str(e)
+                }
+
+        # Build call summary (unique programs called)
+        unique_calls = {}
+        for call in all_calls:
+            program = call["program"]
+            unique_calls[program] = unique_calls.get(program, 0) + 1
+
+        # Build copybook summary (unique copybooks used)
+        unique_copybooks = {}
+        for copybook in all_copybooks:
+            book = copybook["copybook"]
+            unique_copybooks[book] = unique_copybooks.get(book, 0) + 1
+
+        # Build response
+        return {
+            "total_files": len(file_paths),
+            "programs": programs,
+            "program_calls": program_calls,
+            "copybook_usage": copybook_usage,
+            "per_file_analysis": per_file_analysis,
+            "call_summary": {
+                "total_calls": len(all_calls),
+                "unique_programs_called": list(unique_calls.keys()),
+                "call_counts": unique_calls
+            },
+            "copybook_summary": {
+                "total_copybooks": len(all_copybooks),
+                "unique_copybooks": list(unique_copybooks.keys()),
+                "usage_counts": unique_copybooks
+            },
+            "message": f"Analyzed {len(file_paths)} files, found {len(programs)} programs, {len(unique_calls)} unique external calls, {len(unique_copybooks)} copybooks"
+        }
+
+    except ValueError as e:
+        return {
+            "total_files": 0,
+            "error": str(e),
+            "message": "Invalid input for batch analysis"
+        }
+    except Exception as e:
+        return {
+            "total_files": 0,
+            "error": str(e),
+            "message": "Unexpected error during batch analysis"
+        }
