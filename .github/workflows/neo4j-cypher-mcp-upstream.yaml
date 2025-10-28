@@ -116,11 +116,11 @@ jobs:
         run: |
           set -euo pipefail
           echo "${{ steps.check.outputs.current_sha }}" > ".github/.${{ env.PROJECT }}-sha"
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          git add ".github/.${{ env.PROJECT }}-sha"
-          git diff --staged --quiet || {
+          if ! git diff --quiet ".github/.${{ env.PROJECT }}-sha"; then
+            git config user.name "github-actions"
+            git config user.email "github-actions@github.com"
             git pull --rebase origin main
+            git add ".github/.${{ env.PROJECT }}-sha"
             git commit -m "Update ${{ env.PROJECT }} SHA to ${{ steps.check.outputs.current_sha }}"
             git push
-          }
+          fi

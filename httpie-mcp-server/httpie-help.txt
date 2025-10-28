@@ -1,0 +1,17 @@
+usage: httpie [-h] [--debug] [--traceback] [--version] {cli,plugins} ...
+
+Managing interface for the HTTPie itself. <https://httpie.io/docs#manager> Be
+aware that you might be looking for http/https commands for sending HTTP
+requests. This command is only available for managing the HTTTPie plugins and
+the configuration around it.
+
+positional arguments:
+  {cli,plugins}
+
+options:
+  -h, --help     show this help message and exit
+  --debug        Prints the exception traceback should one occur, as well as
+                 other information useful for debugging HTTPie itself and for
+                 reporting bugs.
+  --traceback    Prints the exception traceback should one occur.
+  --version      Show version and exit.
