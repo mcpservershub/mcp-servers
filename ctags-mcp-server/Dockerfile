@@ -1,19 +1,17 @@
 # Multi-stage Dockerfile for Universal CTags MCP Server
 
 # Build stage for CTags - using Alpine for easier build dependencies
-FROM alpine:3.19 AS ctags-builder
+FROM cgr.dev/chainguard/wolfi-base AS ctags-builder
 
 # Install build dependencies for CTags
 RUN apk add --no-cache \
   make \
   gcc \
-  musl-dev \
   git \
   autoconf \
   automake \
-  pkgconf \
-  libtool \
-  build-base
+  pkgconf-dev \
+  libtool 
 
 # Clone and build Universal CTags (static build for portability)
 RUN git clone https://github.com/universal-ctags/ctags.git /tmp/ctags \

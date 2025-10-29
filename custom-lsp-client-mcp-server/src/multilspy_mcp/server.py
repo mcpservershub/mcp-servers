@@ -555,7 +555,7 @@ def generate_cobol_cfg_project(
     - 'arc': Arc diagram format for each file
 
     The tool will scan for COBOL files matching common extensions:
-    .cob, .COB, .cbl, .CBL, .cpy, .CPY
+    .cob, .COB, .cbl, .CBL, .cpy, .CPY, .c74, .C74
     """
     try:
         if not lsp_manager:
@@ -635,7 +635,7 @@ def generate_cobol_cfg_project(
         return {
             "success": True,
             "workspace_root": str(lsp_manager.workspace_root),
-            "file_pattern": file_pattern or "**/*.{cob,cbl,cpy,CBL,COB,CPY}",
+            "file_pattern": file_pattern or "**/*.{cob,cbl,cpy,c74,CBL,COB,CPY,C74}",
             "format": output_format,
             "file_count": len(project_cfg.get("files", [])),
             "output_dir": str(output_dir) if output_dir else None,
