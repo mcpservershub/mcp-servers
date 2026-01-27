@@ -1,0 +1,20 @@
+{
+  "$schema": "https://modelcontextprotocol.io/schema/mcp-config.json",
+  "mcpServers": {
+    "genval": {
+      "command": "python",
+      "args": [
+        "/absolute/path/to/genval-mcp-server/src/genval_mcp_server.py"
+      ],
+      "env": {
+        "GITHUB_TOKEN": "${GITHUB_TOKEN}",
+        "ARTIFACT_REGISTRY_USERNAME": "${ARTIFACT_REGISTRY_USERNAME}",
+        "ARTIFACT_REGISTRY_PASSWORD": "${ARTIFACT_REGISTRY_PASSWORD}",
+        "OPENAI_API_KEY": "${OPENAI_API_KEY}",
+        "OLLAMA_ENDPOINT": "http://localhost:11434"
+      },
+      "description": "Genval MCP Server - Configuration validation and generation",
+      "icon": "🔒"
+    }
+  }
+}

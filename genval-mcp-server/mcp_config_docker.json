@@ -1,0 +1,28 @@
+{
+  "$schema": "https://modelcontextprotocol.io/schema/mcp-config.json",
+  "mcpServers": {
+    "genval": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-v",
+        "${PWD}:/workspace",
+        "-w",
+        "/workspace",
+        "-e",
+        "GITHUB_TOKEN=${GITHUB_TOKEN}",
+        "-e",
+        "ARTIFACT_REGISTRY_USERNAME=${ARTIFACT_REGISTRY_USERNAME}",
+        "-e",
+        "ARTIFACT_REGISTRY_PASSWORD=${ARTIFACT_REGISTRY_PASSWORD}",
+        "-e",
+        "OPENAI_API_KEY=${OPENAI_API_KEY}",
+        "genval-mcp-server:latest"
+      ],
+      "description": "Genval MCP Server (Docker) - Configuration validation and generation",
+      "icon": "🐳"
+    }
+  }
+}
