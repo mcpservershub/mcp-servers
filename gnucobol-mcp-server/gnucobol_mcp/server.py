@@ -194,6 +194,268 @@ def extract_program_id(source_code: str) -> Optional[str]:
     return None
 
 
+def detect_unisys_cobol74(code: str) -> bool:
+    """
+    Auto-detect Unisys XGEN-generated COBOL74 source code.
+
+    Checks for 2+ Unisys-specific markers to avoid false positives.
+
+    Args:
+        code: COBOL source code
+
+    Returns:
+        True if the code appears to be Unisys COBOL74 source
+    """
+    import re
+
+    markers = 0
+    lines = code.split("\n")
+
+    # Check first 200 lines for XGEN in comments
+    for line in lines[:200]:
+        if "XGEN" in line.upper():
+            markers += 1
+            break
+
+    # Check for $ compiler directives in column 7
+    for line in lines:
+        if len(line) > 6 and line[6] == "$":
+            markers += 1
+            break
+
+    upper_code = code.upper()
+
+    # Check for Unisys-specific constructs
+    if "UNISYS-A-SERIES" in upper_code:
+        markers += 1
+    if "DATA-BASE SECTION" in upper_code:
+        markers += 1
+    if re.search(r"SW[1-8]\s+ON\s+IS", upper_code):
+        markers += 1
+    if "ACTUAL KEY IS" in upper_code:
+        markers += 1
+
+    return markers >= 2
+
+
+def _comment_out_line(line: str) -> str:
+    """
+    Comment out a COBOL line by replacing column 7 with '*'.
+
+    Preserves fixed-format layout (cols 1-6 sequence, col 7 indicator).
+
+    Args:
+        line: A single line of COBOL source
+
+    Returns:
+        The line with column 7 set to '*'
+    """
+    if len(line) <= 6:
+        return line
+    return line[:6] + "*" + line[7:]
+
+
+def preprocess_unisys_cobol74(code: str) -> tuple:
+    """
+    Preprocess Unisys XGEN-generated COBOL74 source for GnuCOBOL compatibility.
+
+    Single-pass, line-by-line processor that transforms Unisys-specific constructs
+    into GnuCOBOL-compatible form for metadata/analysis purposes.
+
+    Args:
+        code: Unisys COBOL74 source code
+
+    Returns:
+        Tuple of (transformed_code, summary_dict) where summary_dict describes
+        what was changed
+    """
+    import re
+
+    lines = code.split("\n")
+    output_lines = []
+    summary = {
+        "preprocessor": "unisys-cobol74",
+        "dollar_directives_commented": 0,
+        "segment_limit_commented": 0,
+        "computer_name_replaced": 0,
+        "switch_names_replaced": 0,
+        "assign_rewritten": 0,
+        "actual_key_commented": 0,
+        "value_of_commented": 0,
+        "database_section_commented": 0,
+        "procedure_verbs_commented": 0,
+    }
+
+    # State flags
+    in_database_section = False
+    commenting_through_period = False
+
+    # Unisys VALUE OF attributes to comment out (keep VALUE OF TITLE)
+    unisys_value_attrs = {
+        "DEPENDENTSPECS", "FAMILYNAME", "USERBACKUPNAME",
+        "PRINTDISPOSITION", "SAVEPRINTFILE", "FILENAME",
+    }
+
+    # Unisys procedure division verb patterns
+    unisys_verb_patterns = [
+        re.compile(r"FIND\s+.*\bOF\b.*\bVIA\b", re.IGNORECASE),
+        re.compile(r"SET\s+.*\bTO\s+(BEGINNING|ENDING)\b", re.IGNORECASE),
+        re.compile(r"BEGIN-TRANSACTION\b", re.IGNORECASE),
+        re.compile(r"END-TRANSACTION\b", re.IGNORECASE),
+        re.compile(r"ABORT-TRANSACTION\b", re.IGNORECASE),
+        re.compile(r"CHANGE\s+ATTRIBUTE\b", re.IGNORECASE),
+        re.compile(r"WAIT\s+\d+", re.IGNORECASE),
+        re.compile(r"OPEN\s+(INQUIRY|UPDATE)\b", re.IGNORECASE),
+        re.compile(r"DMSTATUS\b", re.IGNORECASE),
+    ]
+
+    for line in lines:
+        # Get the code area (cols 8-72 in fixed format)
+        code_area = line[7:72] if len(line) > 7 else ""
+        code_area_upper = code_area.upper().strip()
+
+        # Skip already-commented lines
+        is_comment = len(line) > 6 and line[6] in ("*", "/")
+
+        # --- State: commenting through period (multi-line Unisys verb) ---
+        if commenting_through_period:
+            if not is_comment:
+                output_lines.append(_comment_out_line(line))
+                summary["procedure_verbs_commented"] += 1
+            else:
+                output_lines.append(line)
+            if "." in code_area:
+                commenting_through_period = False
+            continue
+
+        # --- State: inside DATA-BASE SECTION ---
+        if in_database_section:
+            # Check if we've reached a standard section or division
+            if re.search(
+                r"(WORKING-STORAGE\s+SECTION|LINKAGE\s+SECTION|"
+                r"FILE\s+SECTION|PROCEDURE\s+DIVISION|"
+                r"SCREEN\s+SECTION|REPORT\s+SECTION|"
+                r"COMMUNICATION\s+SECTION|LOCAL-STORAGE\s+SECTION)",
+                code_area_upper,
+            ):
+                in_database_section = False
+                output_lines.append(line)
+            else:
+                if not is_comment:
+                    output_lines.append(_comment_out_line(line))
+                    summary["database_section_commented"] += 1
+                else:
+                    output_lines.append(line)
+            continue
+
+        # --- Phase 1: $ compiler directives (col 7) ---
+        if len(line) > 6 and line[6] == "$":
+            output_lines.append(_comment_out_line(line))
+            summary["dollar_directives_commented"] += 1
+            continue
+
+        # Skip further processing for comments
+        if is_comment:
+            output_lines.append(line)
+            continue
+
+        modified_line = line
+
+        # --- Phase 2: SEGMENT-LIMIT IS n ---
+        if re.search(r"SEGMENT-LIMIT\s+IS\s+\d+", code_area_upper):
+            output_lines.append(_comment_out_line(modified_line))
+            summary["segment_limit_commented"] += 1
+            continue
+
+        # --- Phase 3: UNISYS-A-SERIES computer name ---
+        if "UNISYS-A-SERIES" in modified_line.upper():
+            # Replace with same-length string to preserve column alignment
+            modified_line = re.sub(
+                r"UNISYS-A-SERIES",
+                "GNUCOBOL-COMPAT",
+                modified_line,
+                flags=re.IGNORECASE,
+            )
+            summary["computer_name_replaced"] += 1
+
+        # --- Phase 4: SW1-SW8 switch names ---
+        sw_match = re.search(r"\bSW([1-8])\b", modified_line.upper())
+        if sw_match:
+            for i in range(1, 9):
+                modified_line = re.sub(
+                    rf"\bSW{i}\b",
+                    f"SWITCH-{i}",
+                    modified_line,
+                    flags=re.IGNORECASE,
+                )
+            summary["switch_names_replaced"] += 1
+
+        # --- Phase 5: ASSIGN TO DISK / ASSIGN TO PRINTER ---
+        assign_disk = re.search(r"ASSIGN\s+TO\s+DISK\b", modified_line, re.IGNORECASE)
+        assign_printer = re.search(r"ASSIGN\s+TO\s+PRINTER\b", modified_line, re.IGNORECASE)
+        if assign_disk:
+            modified_line = re.sub(
+                r"ASSIGN\s+TO\s+DISK\b",
+                'ASSIGN TO "DISK-FILE"',
+                modified_line,
+                flags=re.IGNORECASE,
+            )
+            summary["assign_rewritten"] += 1
+        elif assign_printer:
+            modified_line = re.sub(
+                r"ASSIGN\s+TO\s+PRINTER\b",
+                'ASSIGN TO "PRINTER"',
+                modified_line,
+                flags=re.IGNORECASE,
+            )
+            summary["assign_rewritten"] += 1
+
+        # --- Phase 6: ACTUAL KEY IS ---
+        if "ACTUAL KEY IS" in code_area_upper:
+            output_lines.append(_comment_out_line(modified_line))
+            summary["actual_key_commented"] += 1
+            continue
+
+        # --- Phase 7: VALUE OF with Unisys attributes ---
+        if "VALUE OF" in code_area_upper:
+            # Check if it's a Unisys-specific attribute
+            value_of_match = re.search(
+                r"VALUE\s+OF\s+(\w+)", code_area, re.IGNORECASE
+            )
+            if value_of_match:
+                attr_name = value_of_match.group(1).upper()
+                if attr_name in unisys_value_attrs:
+                    output_lines.append(_comment_out_line(modified_line))
+                    summary["value_of_commented"] += 1
+                    continue
+
+        # --- Phase 8: DATA-BASE SECTION ---
+        if "DATA-BASE SECTION" in code_area_upper:
+            in_database_section = True
+            output_lines.append(_comment_out_line(modified_line))
+            summary["database_section_commented"] += 1
+            continue
+
+        # --- Phase 9: Unisys procedure division verbs ---
+        verb_found = False
+        for pattern in unisys_verb_patterns:
+            if pattern.search(code_area):
+                output_lines.append(_comment_out_line(modified_line))
+                summary["procedure_verbs_commented"] += 1
+                verb_found = True
+                # Check if statement continues (no period on this line)
+                if "." not in code_area:
+                    commenting_through_period = True
+                break
+
+        if verb_found:
+            continue
+
+        output_lines.append(modified_line)
+
+    return "\n".join(output_lines), summary
+
+
 def discover_cobol_files(directory_path: str, recursive: bool = True) -> List[str]:
     """
     Discover COBOL source files in a directory.
@@ -258,6 +520,11 @@ async def _compile_cobol_code(
         # Validate input
         validate_cobol_code(code)
 
+        # Preprocess Unisys COBOL74 if detected
+        preprocessing_summary = None
+        if detect_unisys_cobol74(code):
+            code, preprocessing_summary = preprocess_unisys_cobol74(code)
+
         # Create temporary directory for compilation
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
@@ -297,6 +564,9 @@ async def _compile_cobol_code(
             else:
                 response["message"] = "Compilation failed"
                 response["error"] = result["stderr"]
+
+            if preprocessing_summary:
+                response["preprocessing"] = preprocessing_summary
 
             return response
 
@@ -416,6 +686,11 @@ async def _syntax_check_code(
         # Validate input
         validate_cobol_code(code)
 
+        # Preprocess Unisys COBOL74 if detected
+        preprocessing_summary = None
+        if detect_unisys_cobol74(code):
+            code, preprocessing_summary = preprocess_unisys_cobol74(code)
+
         # Create temporary directory for syntax check
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
@@ -469,6 +744,9 @@ async def _syntax_check_code(
                     response["message"] += f" ({len(warnings)} warning(s))"
             else:
                 response["message"] = f"Syntax check failed with {len(errors)} error(s)"
+
+            if preprocessing_summary:
+                response["preprocessing"] = preprocessing_summary
 
             return response
 
@@ -582,6 +860,11 @@ async def _analyze_cobol_code(
         # Validate input
         validate_cobol_code(code)
 
+        # Preprocess Unisys COBOL74 if detected
+        preprocessing_summary = None
+        if detect_unisys_cobol74(code):
+            code, preprocessing_summary = preprocess_unisys_cobol74(code)
+
         # Create temporary directory for analysis
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
@@ -661,6 +944,9 @@ async def _analyze_cobol_code(
             else:
                 response["message"] = "Analysis completed with errors"
                 response["error"] = result["stderr"]
+
+            if preprocessing_summary:
+                response["preprocessing"] = preprocessing_summary
 
             return response
 

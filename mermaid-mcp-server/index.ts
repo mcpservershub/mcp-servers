@@ -145,6 +145,22 @@ const GENERATE_TOOL: Tool = {
   },
 };
 
+const VALIDATE_TOOL: Tool = {
+  name: "validate",
+  description:
+    "Validate mermaid diagram syntax without rendering. Returns validation result with any syntax errors found. Use this for fast syntax checking before rendering.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      code: {
+        type: "string",
+        description: "The mermaid markdown to validate",
+      },
+    },
+    required: ["code"],
+  },
+};
+
 // Server implementation
 const server = new Server(
   {
@@ -178,6 +194,111 @@ function isGenerateArgs(args: unknown): args is {
     (!(args as any).name || typeof (args as any).name === "string") &&
     (!(args as any).folder || typeof (args as any).folder === "string")
   );
+}
+
+function isValidateArgs(args: unknown): args is {
+  code: string;
+} {
+  return (
+    typeof args === "object" &&
+    args !== null &&
+    "code" in args &&
+    typeof (args as any).code === "string"
+  );
+}
+
+/**
+ * Validates mermaid diagram syntax without rendering
+ * Uses Puppeteer to run mermaid.parse() in a browser context
+ *
+ * @param code - The mermaid code to validate
+ * @returns Object with valid: boolean and error?: string
+ */
+async function validateMermaidSyntax(
+  code: string,
+): Promise<{ valid: boolean; error?: string }> {
+  log(LogLevel.INFO, "Validating mermaid syntax");
+  log(LogLevel.DEBUG, `Code to validate: ${code.substring(0, 100)}...`);
+
+  // Resolve the path to the local mermaid.js file
+  const distPath = path.dirname(
+    url.fileURLToPath(resolve("mermaid", import.meta.url)),
+  );
+  const mermaidPath = path.resolve(distPath, "mermaid.min.js");
+  log(LogLevel.DEBUG, `Using Mermaid from: ${mermaidPath}`);
+
+  const browser = await puppeteer.launch({
+    headless: true,
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  });
+
+  let page: puppeteer.Page | null = null;
+
+  try {
+    page = await browser.newPage();
+    log(LogLevel.DEBUG, "Browser page created for validation");
+
+    // Minimal HTML - we don't need any rendering elements
+    const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head><title>Mermaid Validator</title></head>
+    <body></body>
+    </html>
+    `;
+
+    const tempHtmlPath = path.join(__dirname, "temp-validate.html");
+    fs.writeFileSync(tempHtmlPath, htmlContent);
+
+    await page.goto(`file://${tempHtmlPath}`);
+    await page.addScriptTag({ path: mermaidPath });
+
+    // Run mermaid.parse() which validates syntax without rendering
+    const result = await page.evaluate(async (mermaidCode) => {
+      try {
+        // @ts-ignore - mermaid is loaded by the script tag
+        window.mermaid.initialize({
+          startOnLoad: false,
+          securityLevel: "loose",
+        });
+
+        // mermaid.parse() returns true if valid, throws error if invalid
+        // @ts-ignore - mermaid is loaded by the script tag
+        await window.mermaid.parse(mermaidCode);
+        return { valid: true };
+      } catch (error) {
+        return {
+          valid: false,
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
+    }, code);
+
+    // Clean up temp file
+    fs.unlinkSync(tempHtmlPath);
+    log(LogLevel.DEBUG, "Temporary validation HTML file cleaned up");
+
+    if (result.valid) {
+      log(LogLevel.INFO, "Mermaid syntax validation passed");
+    } else {
+      log(LogLevel.INFO, `Mermaid syntax validation failed: ${result.error}`);
+    }
+
+    return result;
+  } catch (error) {
+    log(
+      LogLevel.ERROR,
+      `Error in validateMermaidSyntax: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    return {
+      valid: false,
+      error: `Validation error: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  } finally {
+    await browser.close();
+    log(LogLevel.DEBUG, "Puppeteer browser closed after validation");
+  }
 }
 
 async function renderMermaidPng(
@@ -534,7 +655,7 @@ async function processGenerateRequest(args: {
 
 // Tool handlers
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
-  tools: [GENERATE_TOOL],
+  tools: [GENERATE_TOOL, VALIDATE_TOOL],
 }));
 
 // Set up the request handler for tool calls
@@ -559,6 +680,42 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       // Process the generate request
       return await processGenerateRequest(args);
+    }
+
+    if (name === "validate") {
+      log(LogLevel.INFO, "Validating Mermaid syntax");
+      if (!isValidateArgs(args)) {
+        throw new Error("Invalid arguments for validate");
+      }
+
+      // Validate the mermaid syntax
+      const result = await validateMermaidSyntax(args.code);
+
+      if (result.valid) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify({ valid: true }, null, 2),
+            },
+          ],
+          isError: false,
+        };
+      } else {
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(
+                { valid: false, error: result.error },
+                null,
+                2,
+              ),
+            },
+          ],
+          isError: false, // Not a tool error, just invalid syntax
+        };
+      }
     }
 
     return {
