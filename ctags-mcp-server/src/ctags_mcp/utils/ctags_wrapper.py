@@ -14,10 +14,15 @@ logger = logging.getLogger(__name__)
 
 class CTagsWrapper:
     """Wrapper class for Universal CTags operations."""
-    
+
+    # Custom language mappings for non-standard extensions
+    CUSTOM_LANGUAGE_MAPPINGS = {
+        "Cobol": [".c74", ".cob74", ".cbl74"]  # COBOL74 and other variants
+    }
+
     def __init__(self, ctags_binary: str = "ctags"):
         """Initialize CTags wrapper.
-        
+
         Args:
             ctags_binary: Path to ctags binary
         """
@@ -38,7 +43,19 @@ class CTagsWrapper:
             logger.info(f"CTags found: {result.stdout.splitlines()[0]}")
         except (subprocess.SubprocessError, FileNotFoundError) as e:
             raise RuntimeError(f"Failed to verify ctags: {e}")
-    
+
+    def _get_language_mapping_options(self) -> List[str]:
+        """Get custom language mapping options for ctags.
+
+        Returns:
+            List of --map-<LANG>=+.<ext> options
+        """
+        options = []
+        for lang, extensions in self.CUSTOM_LANGUAGE_MAPPINGS.items():
+            for ext in extensions:
+                options.append(f"--map-{lang}=+{ext}")
+        return options
+
     def generate_tags(
         self,
         path: str,
@@ -64,6 +81,9 @@ class CTagsWrapper:
             Dictionary with generation results
         """
         cmd = [self.ctags_binary]
+
+        # Add custom language mappings
+        cmd.extend(self._get_language_mapping_options())
 
         # Add output file
         cmd.extend(["-f", output_file])
@@ -456,6 +476,9 @@ class CTagsWrapper:
         """
         cmd = [self.ctags_binary, "-x"]
 
+        # Add custom language mappings
+        cmd.extend(self._get_language_mapping_options())
+
         # Add recursive flag if processing directory
         if recursive:
             cmd.append("-R")
@@ -527,7 +550,12 @@ class CTagsWrapper:
         Returns:
             Detected language name or None
         """
-        cmd = [self.ctags_binary, "--print-language", file_path]
+        cmd = [self.ctags_binary]
+
+        # Add custom language mappings
+        cmd.extend(self._get_language_mapping_options())
+
+        cmd.extend(["--print-language", file_path])
 
         try:
             result = subprocess.run(

@@ -97,6 +97,15 @@ uv pip install -e ".[dev]"
 
 The GnuCOBOL MCP Server provides the following file-based tools:
 
+**Supported COBOL File Extensions:**
+The server recognizes and processes files with the following extensions:
+- `.cob`, `.cbl`, `.COB`, `.CBL` - Standard COBOL files
+- `.c74`, `.C74` - COBOL 74 files
+- `.c85`, `.C85` - COBOL 85 files
+- `.cpy`, `.CPY` - Copybook files (sometimes used as source)
+- `.pco`, `.PCO` - Pro*COBOL files
+- `.sqb`, `.SQB` - SQL embedded COBOL files
+
 ### 1. compile_cobol
 
 Compiles a COBOL source file from the filesystem to a native executable.
@@ -337,7 +346,7 @@ Compiles an entire COBOL project from a directory into a single output file (exe
 ```
 
 **Key Features:**
-- **Automatic File Discovery**: Finds all COBOL files (.cob, .cbl, .COB, .CBL) in directory tree
+- **Automatic File Discovery**: Finds all COBOL files with common extensions (.cob, .cbl, .c74, .c85, .cpy, .pco, .sqb and uppercase variants) in directory tree
 - **Single Compilation**: Compiles all files together (more efficient than batch_compile)
 - **Dependency Handling**: GnuCOBOL automatically resolves CALL dependencies between files
 - **Copybook Support**: Specify directories for COPY statement resolution with `-I` flags
@@ -375,11 +384,34 @@ Returns information about the GnuCOBOL compiler installation.
 }
 ```
 
-### 7. batch_analyze
+### 7. health_check
+
+Checks the health status of the MCP server and GnuCOBOL installation.
+
+**Arguments:** None
+
+**Example:**
+```json
+{
+  "name": "health_check"
+}
+```
+
+**Returns:**
+```json
+{
+  "status": "healthy",
+  "server": "online",
+  "compiler_available": true,
+  "message": "MCP server is running"
+}
+```
+
+### 8. batch_analyze
 
 Analyzes multiple COBOL source files and extracts project-level semantic relationships, including inter-file dependencies, CALL statements, and COPY/INCLUDE references. This tool provides comprehensive insights into how COBOL programs interact within a project.
 
-You can provide either specific file paths OR a directory containing COBOL files. When using directory mode, the tool automatically discovers all COBOL files (.cob, .cbl, .COB, .CBL) recursively and filters out non-COBOL files like README, Makefiles, etc.
+You can provide either specific file paths OR a directory containing COBOL files. When using directory mode, the tool automatically discovers all COBOL files with common extensions (.cob, .cbl, .c74, .c85, .cpy, .pco, .sqb and uppercase variants) recursively and filters out non-COBOL files like README, Makefiles, etc.
 
 **Arguments:**
 - `file_paths` (array, optional): Array of paths to COBOL source files (required if `directory` not provided)

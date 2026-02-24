@@ -105,6 +105,7 @@ class LSPManager:
             '.cobol': Language.COBOL,
             '.cpy': Language.COBOL,  # COBOL copybook
             '.pco': Language.COBOL,  # Pro*COBOL
+            '.c74': Language.COBOL,  # COBOL 74
         }
         
         return ext_map.get(file_ext)
@@ -643,7 +644,7 @@ class LSPManager:
 
         # Default COBOL file patterns
         if not file_pattern:
-            patterns = ["**/*.cob", "**/*.COB", "**/*.cbl", "**/*.CBL", "**/*.cpy", "**/*.CPY"]
+            patterns = ["**/*.cob", "**/*.COB", "**/*.cbl", "**/*.CBL", "**/*.cpy", "**/*.CPY", "**/*.c74", "**/*.C74"]
         else:
             patterns = [file_pattern]
 

@@ -1,0 +1,146 @@
+{
+  "$schema": "https://modelcontextprotocol.io/schemas/mcp-config.schema.json",
+  "description": "Sample MCP configuration for HTTPie MCP Server - includes multiple deployment scenarios",
+  "mcpServers": {
+    "httpie-standalone": {
+      "description": "HTTPie MCP Server using standalone Python installation",
+      "command": "python",
+      "args": ["-m", "httpie_mcp.server"],
+      "env": {
+        "PYTHONPATH": "/path/to/httpie-mcp-server/src",
+        "PYTHONUNBUFFERED": "1"
+      },
+      "disabled": false
+    },
+    "httpie-venv": {
+      "description": "HTTPie MCP Server using virtual environment",
+      "command": "/path/to/httpie-mcp-server/.venv/bin/python",
+      "args": ["-m", "httpie_mcp.server"],
+      "env": {
+        "PYTHONUNBUFFERED": "1"
+      },
+      "disabled": true
+    },
+    "httpie-docker": {
+      "description": "HTTPie MCP Server running in Docker container",
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "--name", "httpie-mcp-server",
+        "httpie-mcp-server:latest"
+      ],
+      "env": {},
+      "disabled": true
+    },
+    "httpie-docker-with-volume": {
+      "description": "HTTPie MCP Server in Docker with persistent session storage",
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "--name", "httpie-mcp-server",
+        "-v", "httpie-sessions:/home/mcpuser/.config/httpie",
+        "httpie-mcp-server:latest"
+      ],
+      "env": {},
+      "disabled": true
+    },
+    "httpie-script": {
+      "description": "HTTPie MCP Server using installed script entry point",
+      "command": "httpie-mcp-server",
+      "args": [],
+      "env": {},
+      "disabled": true
+    }
+  },
+  "instructions": {
+    "setup": [
+      "1. Choose one deployment method above and set 'disabled: false' for that configuration",
+      "2. Update paths to match your local installation",
+      "3. For standalone or venv deployments:",
+      "   - Update PYTHONPATH to point to your src directory",
+      "   - Update command path to your Python executable",
+      "4. For Docker deployments:",
+      "   - Build the image first: docker build -t httpie-mcp-server:latest .",
+      "   - Optionally create volume for sessions: docker volume create httpie-sessions",
+      "5. Copy the enabled configuration to your MCP client config file:",
+      "   - Claude Desktop (macOS): ~/Library/Application Support/Claude/claude_desktop_config.json",
+      "   - Claude Desktop (Linux): ~/.config/claude/claude_desktop_config.json",
+      "   - Claude Desktop (Windows): %APPDATA%\\Claude\\claude_desktop_config.json"
+    ],
+    "testing": [
+      "Test the configuration with MCP Inspector:",
+      "npm install -g @modelcontextprotocol/inspector",
+      "mcp-inspector python -m httpie_mcp.server",
+      "or",
+      "mcp-inspector docker run -i --rm httpie-mcp-server:latest"
+    ],
+    "troubleshooting": [
+      "If you encounter issues:",
+      "1. Verify HTTPie is installed: http --version",
+      "2. Check Python version: python --version (must be 3.12+)",
+      "3. Test server manually: python -m httpie_mcp.server",
+      "4. Check logs in your MCP client's log directory",
+      "5. Enable verbose logging by adding to env: LOG_LEVEL=DEBUG"
+    ]
+  },
+  "examples": {
+    "simple_get": {
+      "tool": "http_request",
+      "parameters": {
+        "url": "https://httpbin.org/get"
+      }
+    },
+    "post_json": {
+      "tool": "http_request",
+      "parameters": {
+        "url": "https://httpbin.org/post",
+        "method": "POST",
+        "json_data": {
+          "name": "Alice",
+          "email": "alice@example.com"
+        }
+      }
+    },
+    "authenticated_request": {
+      "tool": "http_request",
+      "parameters": {
+        "url": "https://api.github.com/user",
+        "auth": "username:token",
+        "auth_type": "basic",
+        "headers": {
+          "Accept": "application/vnd.github.v3+json"
+        }
+      }
+    },
+    "download_file": {
+      "tool": "http_download",
+      "parameters": {
+        "url": "https://example.com/file.zip",
+        "output_file": "/tmp/file.zip"
+      }
+    },
+    "session_login": {
+      "tool": "http_session_request",
+      "parameters": {
+        "session_name": "my-api-session",
+        "url": "https://api.example.com/login",
+        "method": "POST",
+        "json_data": {
+          "username": "user",
+          "password": "pass"
+        }
+      }
+    },
+    "session_reuse": {
+      "tool": "http_session_request",
+      "parameters": {
+        "session_name": "my-api-session",
+        "url": "https://api.example.com/profile"
+      }
+    }
+  }
+}

@@ -109,9 +109,6 @@ def validate_cobol_code(code: str) -> None:
     if not code or not code.strip():
         raise ValueError("COBOL code cannot be empty")
 
-    if len(code) > 1_000_000:  # 1MB limit
-        raise ValueError("COBOL code exceeds maximum size of 1MB")
-
 
 def parse_call_statements(listing: str, source_code: str) -> List[Dict[str, Any]]:
     """
@@ -201,7 +198,13 @@ def discover_cobol_files(directory_path: str, recursive: bool = True) -> List[st
     """
     Discover COBOL source files in a directory.
 
-    Looks for files with common COBOL extensions (.cob, .cbl, .CBL, .COB).
+    Looks for files with common COBOL extensions:
+    - .cob, .cbl, .COB, .CBL (standard COBOL)
+    - .c74, .C74 (COBOL 74)
+    - .c85, .C85 (COBOL 85)
+    - .cpy, .CPY (copybooks - sometimes used for source)
+    - .pco, .PCO (Pro*COBOL)
+    - .sqb, .SQB (SQL embedded COBOL)
 
     Args:
         directory_path: Path to directory to search
@@ -210,7 +213,14 @@ def discover_cobol_files(directory_path: str, recursive: bool = True) -> List[st
     Returns:
         List of absolute paths to COBOL files found
     """
-    cobol_extensions = {'.cob', '.cbl', '.COB', '.CBL'}
+    cobol_extensions = {
+        '.cob', '.cbl', '.COB', '.CBL',  # Standard COBOL
+        '.c74', '.C74',                    # COBOL 74
+        '.c85', '.C85',                    # COBOL 85
+        '.cpy', '.CPY',                    # Copybooks (sometimes source files)
+        '.pco', '.PCO',                    # Pro*COBOL
+        '.sqb', '.SQB'                     # SQL embedded COBOL
+    }
     cobol_files = []
 
     dir_path = Path(directory_path)

@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  httpie-mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: httpie-mcp-server:latest
+    container_name: httpie-mcp-server
+    stdin_open: true
+    tty: false
+    # For persistent HTTPie sessions across container restarts
+    volumes:
+      - httpie-sessions:/home/mcpuser/.config/httpie
+    # Uncomment to add custom environment variables
+    # environment:
+    #   - LOG_LEVEL=DEBUG
+    #   - HTTPIE_CONFIG_DIR=/home/mcpuser/.config/httpie
+    restart: unless-stopped
+    # Health check
+    healthcheck:
+      test: ["CMD", "python", "-c", "from httpie_mcp.httpie_client import HTTPieClient; HTTPieClient(verify_installation=True)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  httpie-sessions:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PWD}/data/httpie-sessions
