@@ -1,48 +1,31 @@
 # Multi-stage Dockerfile for chrome-devtools-mcp using Chainguard base images
-# This Dockerfile creates a minimal, secure container for running the MCP server
 
-# Stage 1: Build stage
+# Stage 1: Build stage — bundle all deps into self-contained output
 FROM cgr.dev/chainguard/node:latest-dev AS builder
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
-COPY tsconfig.json ./
+# Copy package files and build configs
+COPY package*.json tsconfig.json rollup.config.mjs puppeteer.config.cjs ./
 
 # Copy scripts directory (required for prepare script during npm ci)
 COPY scripts ./scripts
 
-# Install dependencies
+# Install all dependencies (upstream moved everything to devDependencies)
 RUN npm ci
 
 # Copy source code
 COPY src ./src
 
-# Build the project
-RUN npm run build
+# Bundle the project (tsc + rollup — produces self-contained build/ with all deps inlined)
+RUN npm run bundle
 
-# Stage 2: Production dependencies
-FROM cgr.dev/chainguard/node:latest-dev AS deps
-
-WORKDIR /app
-
-# Copy package files
-COPY package*.json ./
-
-# Copy scripts directory (required for prepare script)
-COPY scripts ./scripts
-
-# Install only production dependencies
-RUN npm ci --omit=dev --ignore-scripts
-
-# Stage 3: Runtime stage with Chrome
+# Stage 2: Runtime stage with Chrome
 FROM cgr.dev/chainguard/wolfi-base:latest
 
 # Install Node.js and Chrome dependencies
 RUN apk add --no-cache \
     nodejs \
-    npm \
     chromium \
     font-noto-emoji \
     font-noto-cjk \
@@ -52,17 +35,13 @@ RUN apk add --no-cache \
 
 WORKDIR /app
 
-# Create non-root user for Chrome (Chainguard images are non-root by default)
-# Chrome requires specific directories and permissions
+# Create non-root user for Chrome
 RUN mkdir -p /home/nonroot/.cache/chrome-devtools-mcp \
     && chown -R nonroot:nonroot /home/nonroot
 
-# Copy built application from builder
+# Copy bundled application from builder (self-contained, no node_modules needed)
 COPY --from=builder --chown=nonroot:nonroot /app/build ./build
 COPY --from=builder --chown=nonroot:nonroot /app/package*.json ./
-
-# Copy production dependencies
-COPY --from=deps --chown=nonroot:nonroot /app/node_modules ./node_modules
 
 # Set environment variables for Chrome
 ENV CHROME_BIN=/usr/bin/chromium-browser \
@@ -74,15 +53,8 @@ ENV CHROME_BIN=/usr/bin/chromium-browser \
 # Switch to non-root user
 USER nonroot
 
-# Expose no ports (MCP servers communicate via stdio)
-
-# Health check (optional - checks if node binary exists)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD node --version || exit 1
 
-# Set the entrypoint to the MCP server
-# Users should run with --headless=true and --isolated=true for containerized environments
 ENTRYPOINT ["node", "build/src/index.js"]
-
-# Default arguments for containerized environment
 CMD ["--headless", "--isolated", "--executablePath=/usr/bin/chromium-browser"]

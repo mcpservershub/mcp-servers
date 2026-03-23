@@ -1,14 +1,14 @@
 FROM cgr.dev/chainguard/wolfi-base
 
-RUN apk update && apk add git nodejs npm
-
 RUN mkdir /repomix
 WORKDIR /repomix
 
-# Install dependencies and build repomix, then link the package to the global scope
-# To reduce the size of the layer, npm ci and npm link are executed in the same RUN command
 COPY . .
-RUN npm ci \
+
+# Install system deps + build in a single layer to avoid stale-cache issues
+# with rolling wolfi packages
+RUN apk update && apk add --no-cache git nodejs npm \
+  && npm ci \
   && npm run build \
   && npm link \
   && npm ci --omit=dev \

@@ -20,8 +20,8 @@ jobs:
       packages: write
       id-token: write
     env:
-      PROJECT_NAME: tree-sitter-graph-mcp
-      PROJECT_PATH: tree-sitter-graph-mcp
+      PROJECT_NAME: tree-sitter-graph-mcp-server
+      PROJECT_PATH: tree-sitter-graph-mcp-server
       REGISTRY: ghcr.io
       IMAGE_PREFIX: ${{ github.repository }}/conatiners/tree-sitter-graph-mcp-server
 
