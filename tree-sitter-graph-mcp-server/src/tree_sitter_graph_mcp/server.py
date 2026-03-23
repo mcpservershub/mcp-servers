@@ -19,7 +19,8 @@ async def tree_sitter_graph(
     tsg_file: str,
     source_file: str,
     output_file: str,
-    create_temp_files: bool = False
+    create_temp_files: bool = False,
+    source_extension: str = ""
 ) -> Dict[str, Any]:
     """
     Generate a graph using the tree-sitter-graph CLI tool.
@@ -35,6 +36,8 @@ async def tree_sitter_graph(
         output_file: Path where the JSON graph output will be saved
         create_temp_files: If True, tsg_file and source_file are treated as content strings
                           and temporary files will be created
+        source_extension: File extension for temp source file (e.g., ".cs", ".py", ".js").
+                         Overrides auto-detection when create_temp_files is True.
     
     Returns:
         Dictionary with success status and output file path or error message
@@ -68,12 +71,15 @@ async def tree_sitter_graph(
                 actual_tsg_file = temp_tsg
             
             # Create temporary source file
-            # Try to determine extension from content or use generic
-            ext = '.txt'
-            if 'function' in source_file or 'const' in source_file or 'var' in source_file:
-                ext = '.js'
-            elif 'def ' in source_file or 'class ' in source_file or 'import ' in source_file:
-                ext = '.py'
+            # Use explicit extension if provided, otherwise auto-detect
+            if source_extension:
+                ext = source_extension if source_extension.startswith('.') else f'.{source_extension}'
+            else:
+                ext = '.txt'
+                if 'function' in source_file or 'const' in source_file or 'var' in source_file:
+                    ext = '.js'
+                elif 'def ' in source_file or 'class ' in source_file or 'import ' in source_file:
+                    ext = '.py'
             
             with tempfile.NamedTemporaryFile(mode='w', suffix=ext, delete=False) as f:
                 f.write(source_file)
@@ -134,6 +140,7 @@ async def tree_sitter_graph(
                         "file_path": os.path.abspath(output_file),
                         "file_size": file_size,
                         "graph_nodes": len(graph_data) if isinstance(graph_data, list) else 1,
+                        "graph": graph_data,
                         "command": " ".join(cmd)
                     }
                 except json.JSONDecodeError:

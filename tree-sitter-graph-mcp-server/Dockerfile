@@ -37,16 +37,15 @@ COPY src/ ./src/
 RUN python -m venv /opt/venv --without-pip --system-site-packages
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Install dependencies directly without pip in venv
+# Install dependencies into site-packages (keep dist-info for runtime metadata)
 RUN python -m pip install --no-cache-dir --target /opt/venv/lib/python3.12/site-packages \
-  --no-compile --no-deps mcp && \
+  --no-compile mcp && \
   # Copy the source package directly
   cp -r src/tree_sitter_graph_mcp /opt/venv/lib/python3.12/site-packages/ && \
-  # Remove all unnecessary files
+  # Remove only safe-to-remove files (keep .dist-info for package metadata)
   find /opt/venv -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true && \
   find /opt/venv -type f -name "*.pyc" -delete && \
   find /opt/venv -type f -name "*.pyo" -delete && \
-  find /opt/venv -type d -name "*.dist-info" -exec rm -rf {} + 2>/dev/null || true && \
   find /opt/venv -type d -name "tests" -exec rm -rf {} + 2>/dev/null || true
 
 # Stage 3: Compile language parsers
@@ -69,7 +68,7 @@ FROM cgr.dev/chainguard/wolfi-base AS final
 
 # Install absolute minimum runtime dependencies
 # Using python-3.12-base instead of full python-3.12
-RUN apk update && apk add --no-cache python-3.12-base libgcc && \
+RUN apk update && apk add --no-cache python-3.12-base libgcc gcc glibc-dev && \
   rm -rf /var/cache/apk/* /tmp/*
 
 # Create non-root user
@@ -106,4 +105,4 @@ ENV PATH="/home/mcp/.cargo/bin:$PATH" \
 USER mcp
 
 # Direct execution without venv
-ENTRYPOINT ["python", "-m", "tree_sitter_graph_mcp.server"]
+ENTRYPOINT ["python3.12", "-m", "tree_sitter_graph_mcp.server"]
