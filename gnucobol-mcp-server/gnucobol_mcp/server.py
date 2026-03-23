@@ -277,6 +277,7 @@ def preprocess_unisys_cobol74(code: str) -> tuple:
         "preprocessor": "unisys-cobol74",
         "dollar_directives_commented": 0,
         "segment_limit_commented": 0,
+        "special_names_commented": 0,
         "computer_name_replaced": 0,
         "switch_names_replaced": 0,
         "assign_rewritten": 0,
@@ -288,6 +289,7 @@ def preprocess_unisys_cobol74(code: str) -> tuple:
 
     # State flags
     in_database_section = False
+    in_special_names = False
     commenting_through_period = False
 
     # Unisys VALUE OF attributes to comment out (keep VALUE OF TITLE)
@@ -348,6 +350,32 @@ def preprocess_unisys_cobol74(code: str) -> tuple:
                     output_lines.append(line)
             continue
 
+        # --- State: inside SPECIAL-NAMES paragraph ---
+        # Comments out everything between SPECIAL-NAMES. and the next
+        # standard COBOL section/division.  Unisys XGEN may put dialect-
+        # specific clauses here (CLASS, ALPHABET, switch defs, CURRENCY,
+        # etc.) that GnuCOBOL cannot parse.  Safe for analysis: SPECIAL-
+        # NAMES content does not affect symbol table or XREF output.
+        if in_special_names:
+            # Exit when we hit any standard section, division, or paragraph
+            # that can follow SPECIAL-NAMES in COBOL74/85/2002.
+            if re.search(
+                r"(INPUT-OUTPUT\s+SECTION|FILE-CONTROL|I-O-CONTROL|"
+                r"DATA\s+DIVISION|PROCEDURE\s+DIVISION|"
+                r"FILE\s+SECTION|WORKING-STORAGE\s+SECTION|"
+                r"LINKAGE\s+SECTION|REPOSITORY)",
+                code_area_upper,
+            ):
+                in_special_names = False
+                output_lines.append(line)
+            else:
+                if not is_comment:
+                    output_lines.append(_comment_out_line(line))
+                    summary["special_names_commented"] += 1
+                else:
+                    output_lines.append(line)
+            continue
+
         # --- Phase 1: $ compiler directives (col 7) ---
         if len(line) > 6 and line[6] == "$":
             output_lines.append(_comment_out_line(line))
@@ -364,7 +392,19 @@ def preprocess_unisys_cobol74(code: str) -> tuple:
         # --- Phase 2: SEGMENT-LIMIT IS n ---
         if re.search(r"SEGMENT-LIMIT\s+IS\s+\d+", code_area_upper):
             output_lines.append(_comment_out_line(modified_line))
+            # SEGMENT-LIMIT often carries the terminating period for the
+            # OBJECT-COMPUTER paragraph. Insert a period line so that
+            # OBJECT-COMPUTER is properly terminated.
+            seq_area = modified_line[:6] if len(modified_line) >= 6 else "      "
+            output_lines.append(seq_area + "                .")
             summary["segment_limit_commented"] += 1
+            continue
+
+        # --- Phase 2b: SPECIAL-NAMES paragraph ---
+        if re.search(r"SPECIAL-NAMES\s*\.", code_area_upper):
+            output_lines.append(_comment_out_line(modified_line))
+            summary["special_names_commented"] += 1
+            in_special_names = True
             continue
 
         # --- Phase 3: UNISYS-A-SERIES computer name ---
