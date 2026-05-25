@@ -6,6 +6,7 @@ import os
 import json
 import asyncio
 import logging
+import threading
 from pathlib import Path
 from typing import Dict, Optional, List, Any, Union
 from datetime import datetime
@@ -43,14 +44,20 @@ class LSPManager:
         # Language server instances cache
         self._lsp_instances: Dict[Language, SyncLanguageServer] = {}
         self._async_instances: Dict[Language, LanguageServer] = {}
-        
+
+        # Persistent server state: keep OmniSharp alive across calls
+        self._started_servers: Dict[Language, bool] = {}
+        self._server_loops: Dict[Language, asyncio.AbstractEventLoop] = {}
+        self._server_threads: Dict[Language, threading.Thread] = {}
+        self._server_contexts: Dict[Language, Any] = {}
+
         # Session management
         self.session_id = datetime.now().isoformat()
         self.session_file = self.cache_dir / f"session_{self.session_id}.json"
-        
+
         # Logger
         self.logger = self._setup_logger()
-        
+
         # File buffers and state
         self.open_files: Dict[str, Dict[str, Any]] = {}
         self.capabilities: Dict[Language, Dict[str, Any]] = {}
@@ -168,32 +175,62 @@ class LSPManager:
     @contextmanager
     def start_sync_server(self, language: Language):
         """
-        Context manager for starting a synchronous language server.
-        
+        Context manager that starts the language server on first call and
+        keeps it alive for all subsequent calls. OmniSharp initialization
+        is expensive (~10 min for large projects), so restarting per-call
+        is prohibitively slow.
+
+        The server is only shut down when cleanup() is called.
+
         Args:
             language: Programming language
-            
+
         Yields:
             Started SyncLanguageServer instance
         """
         server = self.get_sync_server(language)
-        with server.start_server():
-            yield server
-    
+
+        if language not in self._started_servers:
+            # First call: start the server and keep it running
+            loop = asyncio.new_event_loop()
+            loop_thread = threading.Thread(target=loop.run_forever, daemon=True)
+            loop_thread.start()
+
+            ctx = server.language_server.start_server()
+            asyncio.run_coroutine_threadsafe(ctx.__aenter__(), loop=loop).result()
+
+            self._started_servers[language] = True
+            self._server_loops[language] = loop
+            self._server_threads[language] = loop_thread
+            self._server_contexts[language] = ctx
+
+            # Patch the server's loop so request methods can use it
+            server.loop = loop
+            server.language_server.server_started = True
+
+        yield server
+
     @asynccontextmanager
     async def start_async_server(self, language: Language):
         """
         Context manager for starting an asynchronous language server.
-        
+        Keeps the server alive across calls.
+
         Args:
             language: Programming language
-            
+
         Yields:
             Started LanguageServer instance
         """
         server = await self.get_async_server(language)
-        async with server.start_server():
-            yield server
+
+        if language not in self._started_servers:
+            ctx = server.start_server()
+            await ctx.__aenter__()
+            self._started_servers[language] = True
+            self._server_contexts[language] = ctx
+
+        yield server
     
     def _convert_location(self, loc: dict) -> Location:
         """Convert MultilsPy location to our Location model."""
@@ -254,7 +291,7 @@ class LSPManager:
             detail=sym.get("detail"),
             range=range_data,
             selection_range=range_data,
-            children=[]
+            children=[self._convert_symbol(c) for c in sym.get("children", [])]
         )
     
     def _convert_hover(self, hover: dict) -> Hover:
@@ -375,6 +412,51 @@ class LSPManager:
             results = server.request_completions(abs_path, line, column, allow_incomplete)
             return [self._convert_completion(item) for item in results]
     
+    def _convert_document_symbol(self, sym: dict) -> SymbolInformation:
+        """Convert a raw LSP DocumentSymbol (with children) to our SymbolInformation model.
+
+        Unlike _convert_symbol which handles MultilsPy's flattened output,
+        this works with the raw LSP DocumentSymbol response that preserves
+        the hierarchical children structure.
+        """
+        range_data = None
+        if "range" in sym:
+            range_data = Range(
+                start=Position(
+                    line=sym["range"]["start"]["line"],
+                    character=sym["range"]["start"]["character"]
+                ),
+                end=Position(
+                    line=sym["range"]["end"]["line"],
+                    character=sym["range"]["end"]["character"]
+                )
+            )
+
+        selection_range_data = None
+        if "selectionRange" in sym:
+            selection_range_data = Range(
+                start=Position(
+                    line=sym["selectionRange"]["start"]["line"],
+                    character=sym["selectionRange"]["start"]["character"]
+                ),
+                end=Position(
+                    line=sym["selectionRange"]["end"]["line"],
+                    character=sym["selectionRange"]["end"]["character"]
+                )
+            )
+
+        return SymbolInformation(
+            name=sym.get("name", ""),
+            kind=sym.get("kind", 1),
+            location=None,
+            container_name=sym.get("containerName"),
+            deprecated=sym.get("deprecated", False),
+            detail=sym.get("detail"),
+            range=range_data,
+            selection_range=selection_range_data or range_data,
+            children=[self._convert_document_symbol(c) for c in sym.get("children", [])]
+        )
+
     def request_document_symbols(
         self,
         file_path: str,
@@ -382,30 +464,52 @@ class LSPManager:
     ) -> List[SymbolInformation]:
         """
         Request document symbols.
-        
+
+        Bypasses MultilsPy's built-in request_document_symbols (which flattens
+        the hierarchy) and calls the raw LSP textDocument/documentSymbol directly
+        to preserve the parent-child nesting from the language server.
+
         Args:
             file_path: Relative file path
             language: Optional language hint
-            
+
         Returns:
-            List of document symbols
+            List of document symbols with children populated
         """
         lang = language or self.detect_language(file_path)
         if not lang:
             raise ValueError(f"Cannot detect language for {file_path}")
-        
+
         # Check cache first
         cache_key = f"{lang.value}:{file_path}"
         if cache_key in self.symbol_cache:
             return self.symbol_cache[cache_key]
-        
+
         # Convert to absolute path for MultilsPy
         abs_path = str(self.workspace_root / file_path)
-        
+        file_uri = Path(abs_path).as_uri()
+
         with self.start_sync_server(lang) as server:
-            symbols, _ = server.request_document_symbols(abs_path)
-            result = [self._convert_symbol(sym) for sym in symbols]
-            
+            # Call the raw LSP request via the underlying async server,
+            # bypassing MultilsPy's visit_tree_nodes_and_build_tree_repr
+            # which strips children and flattens the response.
+            async def _raw_document_symbols():
+                with server.language_server.open_file(abs_path):
+                    return await server.language_server.server.send.document_symbol(
+                        {"textDocument": {"uri": file_uri}}
+                    )
+
+            response = asyncio.run_coroutine_threadsafe(
+                _raw_document_symbols(), server.loop
+            ).result(timeout=server.timeout)
+
+            if isinstance(response, list) and response and "children" in response[0]:
+                # Hierarchical DocumentSymbol[] response — preserve nesting
+                result = [self._convert_document_symbol(sym) for sym in response]
+            else:
+                # Flat SymbolInformation[] response — use existing converter
+                result = [self._convert_symbol(sym) for sym in response] if response else []
+
             # Cache the results
             self.symbol_cache[cache_key] = result
             return result
@@ -505,17 +609,32 @@ class LSPManager:
                 self.symbol_cache[key] = [SymbolInformation(**sym) for sym in symbols]
     
     def cleanup(self) -> None:
-        """Cleanup all language server instances."""
-        for lang, server in self._lsp_instances.items():
+        """Cleanup all language server instances, shutting down persistent servers."""
+        # Shut down persistent servers properly
+        for lang in list(self._started_servers.keys()):
             try:
-                # MultilsPy should handle cleanup
-                pass
+                ctx = self._server_contexts.get(lang)
+                loop = self._server_loops.get(lang)
+                thread = self._server_threads.get(lang)
+
+                if ctx and loop and loop.is_running():
+                    asyncio.run_coroutine_threadsafe(
+                        ctx.__aexit__(None, None, None), loop
+                    ).result(timeout=10)
+                    loop.call_soon_threadsafe(loop.stop)
+
+                if thread and thread.is_alive():
+                    thread.join(timeout=5)
             except Exception as e:
                 self.logger.log(f"Error cleaning up {lang} server: {e}", logging.ERROR)
-        
+
+        self._started_servers.clear()
+        self._server_loops.clear()
+        self._server_threads.clear()
+        self._server_contexts.clear()
         self._lsp_instances.clear()
         self._async_instances.clear()
-        
+
         # Save session before cleanup
         try:
             self.save_session()
