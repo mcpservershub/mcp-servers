@@ -21,6 +21,7 @@ RUN pip install --upgrade pip wheel
 
 # Install the package with all dependencies
 # Using tree-sitter 0.20.4 for compatibility with tree-sitter-languages
+# TODO: Verify treesitter version
 RUN pip install -e .
 
 # Stage 2: Runtime - Minimal image with only runtime requirements
