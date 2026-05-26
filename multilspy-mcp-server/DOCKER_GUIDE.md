@@ -9,10 +9,19 @@
 
 ## Docker Options
 
-### 1. Minimal Dockerfile (Recommended for Testing)
+### 1. Default Dockerfile (C# / OmniSharp Support)
 ```dockerfile
-# Uses the main Dockerfile - no language servers installed
-docker build -t multilspy-mcp-minimal .
+docker build -t multilspy-mcp-server .
+```
+
+**Use this when:**
+- Working with C# / .NET code bases
+- Need C# code intelligence via OmniSharp
+- Container size: about 1GB (includes .NET SDK 8.0)
+
+### 2. Minimal Dockerfile (No Language Servers)
+```dockerfile
+docker build -f Dockerfile-genreric -t multilspy-mcp-minimal .
 ```
 
 **Use this when:**
@@ -20,19 +29,8 @@ docker build -t multilspy-mcp-minimal .
 - Running in environments where language servers are installed separately
 - Minimizing container size (about 200MB)
 
-### 2. Python Language Server Support
-```dockerfile
-# Build from Dockerfile.with-python-lsp
-docker build -f Dockerfile.with-python-lsp -t multilspy-mcp-python .
-```
-
-**Use this when:**
-- Working primarily with Python code
-- Need Python code intelligence features
-- Container size: about 250MB
-
-### 3. Full Language Server Support (Optional)
-If you need multiple language servers, create a custom Dockerfile:
+### 3. Full Language Server Support (Custom)
+If you need additional language servers beyond C#, create a custom Dockerfile:
 
 ```dockerfile
 FROM python:3.12-slim
@@ -62,18 +60,18 @@ ENV WORKSPACE_ROOT=/workspace \
 
 RUN mkdir -p /workspace /cache
 
-CMD ["python", "-m", "mcp", "run", "multilspy_mcp.server:mcp"]
+CMD ["python", "-m", "multilspy_mcp"]
 ```
 
 ## Building and Running
 
 ### Build the Docker Image
 ```bash
-# Minimal version (no language servers)
+# Default (with C# / OmniSharp support)
 docker build -t multilspy-mcp-server .
 
-# With Python language server
-docker build -f Dockerfile.with-python-lsp -t multilspy-mcp-server .
+# Minimal version (no language servers)
+docker build -f Dockerfile-genreric -t multilspy-mcp-minimal .
 ```
 
 ### Run the Container
@@ -107,7 +105,7 @@ docker run --rm multilspy-mcp-server \
 docker run --rm -i \
   -v $(pwd)/workspace:/workspace \
   multilspy-mcp-server \
-  python -m mcp run multilspy_mcp.server:mcp
+  python -m multilspy_mcp
 ```
 
 ## Docker Compose
@@ -119,7 +117,9 @@ version: '3.8'
 
 services:
   multilspy-mcp:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: multilspy-mcp
     volumes:
       - ./workspace:/workspace:ro
@@ -128,7 +128,7 @@ services:
       - WORKSPACE_ROOT=/workspace
       - MCP_LSP_CACHE_DIR=/cache
       - LOG_LEVEL=INFO
-    command: python -m mcp run multilspy_mcp.server:mcp
+    command: python -m multilspy_mcp
     restart: unless-stopped
 
 volumes:
@@ -137,20 +137,23 @@ volumes:
 
 Run with:
 ```bash
-docker-compose up -d
-docker-compose logs -f
+docker compose up -d
+docker compose logs -f
 ```
 
 ## Language Server Installation Notes
 
-### When Language Servers Are Needed:
-- **Python files**: Install `python-lsp-server` or `jedi-language-server`
-- **TypeScript/JavaScript**: Install `typescript-language-server`
+### Language Servers Included:
+- **C# / .NET**: OmniSharp (pre-installed via .NET SDK 8.0)
+
+### Language Servers NOT Included (install separately):
+- **Python**: Install `python-lsp-server` or `jedi-language-server`
+- **TypeScript/JavaScript**: Install `typescript-language-server` (requires Node.js)
 - **Java**: Install Java runtime and `jdtls`
 - **Go**: Install Go and `gopls`
 - **Rust**: Install Rust and `rust-analyzer`
 
-### When They Are NOT Needed:
+### When Language Servers Are NOT Needed:
 - Testing MCP server connectivity
 - Testing MCP protocol implementation
 - Running in environments with external language servers
@@ -174,16 +177,16 @@ docker run --rm multilspy-mcp-server pip list | grep multilspy
 ```
 
 ### Language server not found
-This is expected if you're using the minimal Dockerfile. Options:
+Options:
 1. Install the language server in the container (rebuild with custom Dockerfile)
 2. Mount a volume with the language server binary
-3. Use the full-featured Dockerfile
+3. Note: OmniSharp (C#) is pre-installed in the default image; other language servers are not
 
 ## Performance Considerations
 
-1. **Minimal Image**: ~200MB, fastest startup, no language servers
-2. **Python LSP Image**: ~250MB, includes Python language server
-3. **Full Image**: 500MB+, includes multiple language servers
+1. **Default Image (C# support)**: ~1GB, includes .NET SDK 8.0 for OmniSharp
+2. **Minimal Image**: ~200MB, fastest startup, no language servers
+3. **Full Custom Image**: 500MB+, includes multiple language servers
 
 Choose based on your needs. For production, consider:
 - Using multi-stage builds
