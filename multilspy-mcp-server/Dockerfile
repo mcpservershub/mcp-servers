@@ -26,6 +26,8 @@ ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
 # Copy and install multilspy-mcp-server
 WORKDIR /app
 COPY pyproject.toml ./
+
+# Copy source files
 COPY src/ ./src/
 RUN pip install --no-cache-dir -e .
 
@@ -33,7 +35,9 @@ RUN pip install --no-cache-dir -e .
 RUN mkdir -p /workspace /cache
 
 ENV WORKSPACE_ROOT=/workspace \
-    MCP_LSP_CACHE_DIR=/cache \
-    PYTHONUNBUFFERED=1
+  MCP_LSP_CACHE_DIR=/cache \
+  PYTHONUNBUFFERED=1
 
+
+# Default command to run the MCP server
 CMD ["python", "-m", "multilspy_mcp"]

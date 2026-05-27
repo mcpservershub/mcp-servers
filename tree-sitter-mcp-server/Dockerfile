@@ -14,6 +14,7 @@ COPY src/ ./src/
 
 # Create virtual environment and install dependencies
 RUN python -m venv /opt/venv
+
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Upgrade pip and install wheel

@@ -61,6 +61,7 @@ COPY --from=python-builder /root/.local /root/.local
 # Copy application code
 WORKDIR /app
 COPY src/ ./src/
+
 COPY pyproject.toml README.md ./
 
 # Set Python path and CTags binary location

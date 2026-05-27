@@ -24,6 +24,7 @@ RUN cargo install --features cli \
 # Stage 2: Python builder - Create minimal Python package for tsg
 FROM cgr.dev/chainguard/wolfi-base AS python-builder
 
+# Set the working Dir
 WORKDIR /build
 
 # Install Python build dependencies
