@@ -75,7 +75,7 @@ RUN mkdir -p /workspace
 # Set working directory to workspace
 WORKDIR /workspace
 
-# Health check
+# Health check on port 3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD python -c "import ctags_mcp; print('healthy')" || exit 1
 

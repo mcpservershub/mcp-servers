@@ -10,7 +10,9 @@ WORKDIR /app
 # Copy package files and install dependencies
 # Use PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true to avoid downloading Chromium again
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+
 COPY index.ts tsconfig.json package.json ./
+
 COPY diagrams /app/diagram
 
 RUN npm install --no-fund --no-audit

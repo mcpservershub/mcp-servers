@@ -21,7 +21,7 @@ RUN cargo install --features cli \
   # Clean up cargo cache
   rm -rf /root/.cargo/registry /root/.cargo/git
 
-# Stage 2: Python builder - Create minimal Python package
+# Stage 2: Python builder - Create minimal Python package for tsg
 FROM cgr.dev/chainguard/wolfi-base AS python-builder
 
 # Set the working Dir
