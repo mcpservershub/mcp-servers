@@ -8,8 +8,8 @@ RUN apk update && apk add rust gcc glibc-dev
 # Build tree-sitter-graph with release optimizations
 # Using release profile and link-time optimizations for smaller binary
 ENV CARGO_PROFILE_RELEASE_LTO=true \
-    CARGO_PROFILE_RELEASE_CODEGEN_UNITS=1 \
-    CARGO_PROFILE_RELEASE_OPT_LEVEL=3
+  CARGO_PROFILE_RELEASE_CODEGEN_UNITS=1 \
+  CARGO_PROFILE_RELEASE_OPT_LEVEL=3
 
 RUN cargo install --features cli \
   --root /tmp/cargo-install \
@@ -24,6 +24,7 @@ RUN cargo install --features cli \
 # Stage 2: Python builder - Create minimal Python package
 FROM cgr.dev/chainguard/wolfi-base AS python-builder
 
+# Set the working Dir
 WORKDIR /build
 
 # Install Python build dependencies

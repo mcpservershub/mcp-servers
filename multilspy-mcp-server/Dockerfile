@@ -6,6 +6,8 @@ WORKDIR /app
 
 # Copy project files
 COPY pyproject.toml ./
+
+# Copy source files
 COPY src/ ./src/
 
 # Install Python dependencies
@@ -16,8 +18,8 @@ RUN mkdir -p /workspace /cache
 
 # Set environment variables
 ENV WORKSPACE_ROOT=/workspace \
-    MCP_LSP_CACHE_DIR=/cache \
-    PYTHONUNBUFFERED=1
+  MCP_LSP_CACHE_DIR=/cache \
+  PYTHONUNBUFFERED=1
 
 # Default command to run the MCP server
 CMD ["python", "-m", "multilspy_mcp"]

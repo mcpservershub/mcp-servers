@@ -23,7 +23,7 @@ jobs:
       PROJECT_NAME: multilspy-mcp-server
       PROJECT_PATH: multilspy-mcp-server
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: ${{ github.repository }}/contianers/multilspy-mcp-server
+      IMAGE_PREFIX: ${{ github.repository }}/containers/multilspy-mcp-server
 
     steps:
       - name: Checkout repository

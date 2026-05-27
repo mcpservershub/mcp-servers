@@ -23,7 +23,7 @@ jobs:
       PROJECT_NAME: tree-sitter-graph-mcp-server
       PROJECT_PATH: tree-sitter-graph-mcp-server
       REGISTRY: ghcr.io
-      IMAGE_PREFIX: ${{ github.repository }}/conatiners/tree-sitter-graph-mcp-server
+      IMAGE_PREFIX: ${{ github.repository }}/containers/tree-sitter-graph-mcp-server
 
     steps:
       - name: Checkout repository
